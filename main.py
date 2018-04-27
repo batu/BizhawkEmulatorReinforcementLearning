@@ -88,13 +88,13 @@ def get_random_successor(state, goal, available_action):
 	return (temp_action, next_state)
 
 def random_goal():
+	'''
 	goal_img = imread(data_paths[np.random.randint(len(data_paths))])
 	goal = embedded_model.predict(np.expand_dims(goal_img, axis=0))[0]
 	'''
 	goal = np.zeros(max_embedding.shape)
 	for i in range(len(max_embedding)):
 		goal[i] = np.random.uniform(min_embedding[i], max_embedding[i])
-	'''
 	return goal
 
 def render_video(edge_list):
