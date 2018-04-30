@@ -138,7 +138,7 @@ def make_chart(scores):
     plt.show()
 
 
-bizhawk_dirs = 'BizHawk-2.2.2/'
+bizhawk_dirs = '../BizHawk/'
 rom_dirs = 'Rom/'
 rom_name = 'Super Mario World (U) [!].smc'
 data_dirs = 'Data/'
@@ -162,7 +162,7 @@ min_embedding = np.amin(original_embedding, axis=0)
 
 if __name__ == '__main__':
     actions = ['U', 'D', 'L', 'R', 's', 'S', 'Y', 'B', 'X', 'A', 'l', 'r']
-    with open('../RRT/Input Log.txt', 'r') as f:
+    with open('Input Log.txt', 'r') as f:
         for i, line in enumerate(f):
             temp_action = 0
             for i, action in enumerate(actions):
@@ -181,7 +181,7 @@ if __name__ == '__main__':
 
     proc = subprocess.Popen([bizhawk_dirs + 'EmuHawk.exe',
                             rom_dirs + rom_name,
-                            '--lua=../rrt.lua',
+                            '--lua = rrt.lua',
                             '--dump-type=wave',
                             '--dump-name=sound.wav'],
                             stdout=subprocess.PIPE,
