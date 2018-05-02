@@ -62,7 +62,7 @@ def get_random_successor(state, goal, available_action):
         for j, name in enumerate(action_name):
             if action[j] == '1':
                 action_code += b'buttons["' + str.encode(name) + b'"] = 1 '
-
+                print(b'buttons["' + str.encode(name) + b'"] = 1 ')
         # send the action to BizHawk
         action_code += b'joypad.set(buttons, 1) '
         action_code += b'emu.frameadvance() '
