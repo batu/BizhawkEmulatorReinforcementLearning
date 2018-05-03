@@ -48,7 +48,7 @@ class BizHawk(gym.Env):
         print("Done loading models.")
 
         self.EPISODE_LENGTH = 512
-        self.ACTION_LENGTH = 8
+        self.ACTION_LENGTH = 12
 
         self.last_cos_similarity = np.inf
         self.cumulative_reward = 0
@@ -167,7 +167,7 @@ class BizHawk(gym.Env):
 
     def update_target_vector_normalized_random(self):
         goal = np.zeros(self.max_embedding.shape)
-        np.random.seed(41)
+        # np.random.seed(41)
         for i in range(len(self.max_embedding)):
             goal[i] = np.random.uniform(self.min_embedding[i], self.max_embedding[i])
         self.target_vector = goal
