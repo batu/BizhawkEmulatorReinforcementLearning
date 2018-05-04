@@ -83,8 +83,8 @@ class BizHawk(gym.Env):
         for _ in range(self.memory_count):
             self.memory_vectors.append(np.zeros(unit_state_size))
 
-        high = np.ones(unit_state_size * self.memory_count + 256)
-        low = np.zeros(unit_state_size * self.memory_count + 256)
+        high = np.ones(unit_state_size * self.memory_count + 0)
+        low = np.zeros(unit_state_size * self.memory_count + 0)
         self.observation_space = spaces.Box(low, high)
 
         # Store what the agent tried
@@ -133,7 +133,10 @@ class BizHawk(gym.Env):
     def _get_state(self):
         self.update_current_vector_bizhawk_screenshot()
         # self.update_target_vector_normalized_random()
-        if self.memory_count > 0:
+        if self.state_representation == "SS":
+            return self.current_vector
+
+        if self.memory_count > 1:
             combined_state = np.append(self.memory_vectors, self.target_vector)
         else:
             combined_state = np.append(self.current_vector, self.target_vector)
