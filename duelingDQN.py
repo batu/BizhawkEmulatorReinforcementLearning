@@ -16,6 +16,7 @@ ENV_NAME = 'BizHawk-v0'
 env = gym_bizhawk.BizHawk()
 nb_actions = env.action_space.n
 
+print(env.observation_space.shape)
 model = Sequential()
 model.add(Flatten(input_shape=(1,) + env.observation_space.shape))
 model.add(Dense(16))
@@ -29,11 +30,11 @@ model.add(Dense(nb_actions, activation='linear'))
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
-memory = SequentialMemory(limit=50000, window_length=1)
+memory = SequentialMemory(limit=50000, window_length=5)
 policy = BoltzmannQPolicy()
 # enable the dueling network
 # you can specify the dueling_type to one of {'avg','max','naive'}
-dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=10,
+dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=50,
                enable_dueling_network=True, dueling_type='avg', target_model_update=1e-2, policy=policy)
 dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 

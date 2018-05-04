@@ -25,12 +25,16 @@ state_dirs = 'States/'
 class BizHawk(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self):
+    def __init__(self, state_representation="SS", state_frame_count=0):
         self.__version__ = "0.1.0"
         print("BizHawk - Version {}".format(self.__version__))
 
+        state_frame_count = 1 if state_frame_count < 1 else state_frame_count
+        self.state_representation = state_representation
+
         self.target_vector = []
         self.current_vector = []
+        self.last_distance = 0
 
         self.paths = []
         self.data_paths = glob(data_dirs + '*')
@@ -50,7 +54,7 @@ class BizHawk(gym.Env):
         self.EPISODE_LENGTH = 512
         self.ACTION_LENGTH = 12
 
-        self.last_cos_similarity = np.inf
+        self.last_cos_similarity = 0
         self.cumulative_reward = 0
 
         # This will probably be Discrete(33) for all decided actionsself.
@@ -69,9 +73,22 @@ class BizHawk(gym.Env):
         }
 
         self.action_space = spaces.Discrete(len(self.action_dict))
-        high = np.ones(512)
-        low = np.zeros(512)
+
+        self.memory_vectors = []
+        self.memory_count = state_frame_count
+
+        if self.state_representation == "RAM":
+            unit_state_size = 4096
+        elif self.state_representation == "SS":
+            unit_state_size = 256
+
+        for _ in range(self.memory_count):
+            self.memory_vectors.append(np.zeros(unit_state_size))
+
+        high = np.ones(unit_state_size * self.memory_count + 256)
+        low = np.zeros(unit_state_size * self.memory_count + 256)
         self.observation_space = spaces.Box(low, high)
+
         # Store what the agent tried
         self.curr_episode = -1
         self.action_episode_memory = []
@@ -104,7 +121,7 @@ class BizHawk(gym.Env):
         print("For episode {} the cumulative_reward was {}.".format(self.curr_episode, self.cumulative_reward))
         self.curr_episode = -1
         self.cumulative_reward = 0
-        self.update_target_vector_normalized_random()
+        self.update_target_vector()
 
         self.proc.stdin.write(b'client.speedmode(400) ')
         self.proc.stdin.write(b'savestate.loadslot(1) ')
@@ -117,7 +134,10 @@ class BizHawk(gym.Env):
     def _get_state(self):
         self.update_current_vector_bizhawk_screenshot()
         # self.update_target_vector_normalized_random()
-        combined_state = np.append(self.current_vector, self.target_vector)
+        if self.memory_count > 0:
+            combined_state = np.append(self.memory_vectors, self.target_vector)
+        else:
+            combined_state = np.append(self.current_vector, self.target_vector)
         # print(self.cumulative_reward)
         return combined_state
 
@@ -138,14 +158,39 @@ class BizHawk(gym.Env):
             self.proc.stdin.flush()
 
     def _get_reward(self):
-        cosine_similarity = 1 - spatial.distance.cosine(self.current_vector, self.target_vector)
-        if self.last_cos_similarity < cosine_similarity:
+        def plus_one_for_positivedelta():
+            cosine_similarity = 1 - spatial.distance.cosine(self.current_vector, self.target_vector)
+            if self.last_cos_similarity < cosine_similarity:
+                self.last_cos_similarity = cosine_similarity
+                return 1
+            else:
+                self.last_cos_similarity = cosine_similarity
+                return -1
+
+        def delta_in_similarity():
+            cosine_similarity = 1 - spatial.distance.cosine(self.current_vector, self.target_vector)
+            delta = cosine_similarity - self.last_cos_similarity
             self.last_cos_similarity = cosine_similarity
-            return 1
-        else:
-            self.last_cos_similarity = cosine_similarity
-            return -1
-        # return cosine_similarity
+            return delta
+
+        def distance_x_location():
+            code = b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(149)) + b')) '
+            code += b'io.stdout:write(" ") '
+            self.proc.stdin.write(code)
+            self.proc.stdin.flush()
+            new_line = self.proc.stdout.readline()
+            try:
+                read_byte = new_line[:-1].split()[0]
+                distance = int.from_bytes(read_byte, byteorder="little", signed=False) - 48
+            except IndexError:
+                distance = self.last_distance
+
+            delta = distance - self.last_distance
+            self.last_distance = distance
+            print(delta)
+            return delta
+
+        return plus_one_for_positivedelta()
 
     def update_current_vector_bizhawk_screenshot(self):
         self.proc.stdin.write(b'client.screenshot("temp_screenshot.png") ')
@@ -160,23 +205,68 @@ class BizHawk(gym.Env):
                                                 mode='reflect'),
                                                 axis=0)
         self.current_vector = self.embedded_model.predict(temp_img)[0]
+        if self.memory_vectors:
+            self.memory_vectors.pop()
+            self.memory_vectors.append(self.current_vector)
 
-    def update_target_vector_random_screenshot(self):
-        goal_img = imread(self.data_paths[np.random.randint(len(self.data_paths))])
-        self.target_vector = self.embedded_model.predict(np.expand_dims(goal_img, axis=0))[0]
+    def update_target_vector(self):
+        def random_screenshot_embedding_vector(MovingTarget=False):
+            if not MovingTarget:
+                np.random.seed(41)
+            goal_img = imread(self.data_paths[np.random.randint(len(self.data_paths))])
+            self.target_vector = self.embedded_model.predict(np.expand_dims(goal_img, axis=0))[0]
 
-    def update_target_vector_normalized_random(self):
-        goal = np.zeros(self.max_embedding.shape)
-        # np.random.seed(41)
-        for i in range(len(self.max_embedding)):
-            goal[i] = np.random.uniform(self.min_embedding[i], self.max_embedding[i])
-        self.target_vector = goal
+        def normalized_random_embedding_vector(MovingTarget=False):
+            goal = np.zeros(self.max_embedding.shape)
+            if not MovingTarget:
+                np.random.seed(41)
+            for i in range(len(self.max_embedding)):
+                goal[i] = np.random.uniform(self.min_embedding[i], self.max_embedding[i])
+            self.target_vector = goal
 
-    def update_target_vector_random(self):
-        goal = np.zeros(self.max_embedding.shape)
-        for i in range(len(self.max_embedding)):
-            goal[i] = np.random.uniform(0, 1)
-        self.target_vector = goal
+        def random_embedding_vector(MovingTarget=False):
+            if not MovingTarget:
+                np.random.seed(41)
+            goal = np.zeros(self.max_embedding.shape)
+            for i in range(len(self.max_embedding)):
+                goal[i] = np.random.uniform(0, 1)
+            self.target_vector = goal
+
+        random_screenshot_embedding_vector()
+
+    def read_byte_lua(self, num):
+        code = b''
+        code += b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(num)) + b')) '
+        code += b'io.stdout:write(" ") '
+        return code
+
+    def send_byte_read_command(self):
+        self.proc.stdin.write(b'io.stdout:write("pass\\n") ')
+        code = b''
+        for i in range(4096):
+            code += b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(i)) + b')) '
+            code += b'io.stdout:write(" ") '
+        code += b'io.stdout:write("\\n") io.stdout:write("continue\\n") '
+        self.proc.stdin.write(code)
+        self.proc.stdin.flush()
+
+    def receive_bytes_from_lua(self):
+        global state_num
+        new_line = b''
+
+        while new_line != b'pass\n':
+            new_line = self.proc.stdout.readline()
+
+        print("Got the pass.")
+        new_line = self.proc.stdout.readline()
+        nums = new_line[:-1].split()
+        print(nums)
+        state_num = nums
+
+        new_line = self.proc.stdout.readline()
+        while new_line != b'continue\n':
+            new_line = self.proc.stdout.readline()
+        print("Got the cont.")
 
     def start_bizhawk_process(self):
         win_unicode_console.enable()
