@@ -65,11 +65,9 @@ class BizHawk(gym.Env):
         # 3 : Right
 
         self.action_dict = {
-            0: "",
-            1: "A",
-            2: "Left",
-            3: "Right",
-            4: "B"
+            0: "A",
+            1: "Right",
+            2: "B"
         }
 
         self.action_space = spaces.Discrete(len(self.action_dict))
@@ -125,6 +123,7 @@ class BizHawk(gym.Env):
 
         self.proc.stdin.write(b'client.speedmode(400) ')
         self.proc.stdin.write(b'savestate.loadslot(1) ')
+        self.proc.stdin.write(b'emu.frameadvance() ')
         self.proc.stdin.flush()
         return self._get_state()
 
@@ -174,29 +173,49 @@ class BizHawk(gym.Env):
             return delta
 
         def distance_x_location():
+            self.proc.stdin.write(b'io.stdout:write("Start\\n") ')
             code = b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(149)) + b')) '
             code += b'io.stdout:write(" ") '
             self.proc.stdin.write(code)
             self.proc.stdin.flush()
+
             new_line = self.proc.stdout.readline()
+            while new_line != b'Start\n':
+                new_line = self.proc.stdout.readline()
+            new_line = self.proc.stdout.readline()
+
             try:
                 read_byte = new_line[:-1].split()[0]
                 distance = int.from_bytes(read_byte, byteorder="little", signed=False) - 48
             except IndexError:
+                print("Index error!")
                 distance = self.last_distance
 
-            delta = distance - self.last_distance
-            self.last_distance = distance
-            print(delta)
-            return delta
+            self.proc.stdin.write(b'io.stdout:write("DoneReward\\n") ')
+            self.proc.stdin.flush()
 
-        return plus_one_for_positivedelta()
+            new_line = self.proc.stdout.readline()
+            while new_line not in b'DoneReward\n':
+                new_line = self.proc.stdout.readline()
+
+            delta = distance - self.last_distance
+            if delta > 0:
+                reward = 1
+            elif delta < 0:
+                reward = -.3
+            else:
+                reward = 0.005
+            self.last_distance = distance
+            return reward
+
+        return distance_x_location()
 
     def update_current_vector_bizhawk_screenshot(self):
+        self.proc.stdin.flush()
         self.proc.stdin.write(b'client.screenshot("temp_screenshot.png") ')
         self.proc.stdin.write(b'io.stdout:write("continue\\n") ')
         self.proc.stdin.flush()
-        new_line = b''
+
         new_line = self.proc.stdout.readline()
         while new_line != b'continue\n':
             new_line = self.proc.stdout.readline()
@@ -257,16 +276,13 @@ class BizHawk(gym.Env):
         while new_line != b'pass\n':
             new_line = self.proc.stdout.readline()
 
-        print("Got the pass.")
         new_line = self.proc.stdout.readline()
         nums = new_line[:-1].split()
-        print(nums)
         state_num = nums
 
         new_line = self.proc.stdout.readline()
         while new_line != b'continue\n':
             new_line = self.proc.stdout.readline()
-        print("Got the cont.")
 
     def start_bizhawk_process(self):
         win_unicode_console.enable()
