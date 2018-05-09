@@ -94,8 +94,8 @@ class BizHawk(gym.Env):
 		for _ in range(self.memory_count):
 			self.memory_vectors.append(np.zeros(unit_state_size))
 
-		high = np.ones(unit_state_size * self.memory_count + 0)
-		low = np.zeros(unit_state_size * self.memory_count + 0)
+		high = np.ones(unit_state_size * self.memory_count)
+		low = np.zeros(unit_state_size * self.memory_count)
 		self.observation_space = spaces.Box(low, high)
 
 		# Store what the agent tried
@@ -160,9 +160,14 @@ class BizHawk(gym.Env):
 			ram_state = self.get_ram_state()
 			if ram_state:
 				self.current_RAM_state = ram_state
+
 			return self.current_RAM_state
+
+		def pixel_state():
+			return self.get_pixel_data()
+
 		# print(self.cumulative_reward)
-		return RAM_4096_state()
+		return pixel_state()
 
 	def get_ram_state(self, normalize=True):
 		self.send_byte_read_command()
@@ -179,6 +184,22 @@ class BizHawk(gym.Env):
 			return RAM_state_normalized
 		else:
 			return RAM_state
+
+	def get_pixel_data(self):
+		self.proc.stdin.flush()
+		self.proc.stdin.write(b'client.screenshot("temp_screenshot.png") ')
+		self.proc.stdin.write(b'io.stdout:write("continue\\n") ')
+		self.proc.stdin.flush()
+
+		new_line = self.proc.stdout.readline()
+		while new_line != b'continue\n':
+			new_line = self.proc.stdout.readline()
+		temp_img = np.expand_dims(resize(imread('temp_screenshot.png'),
+												(224, 256),
+												mode='reflect'),
+												axis=0)
+		# (1, 224, 256, 3)
+		return temp_img
 
 	def _take_action(self, action):
 		selected_action = self.action_dict[action]
