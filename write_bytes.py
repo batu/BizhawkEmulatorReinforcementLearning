@@ -39,7 +39,7 @@ def start_bizhawk_game(proc):
 
 		# started
 		if started:
-			proc.stdin.write(b'client.speedmode(100) ')
+			proc.stdin.write(b'client.speedmode(400) ')
 			proc.stdin.write(b'savestate.loadslot(1) ')
 			proc.stdin.flush()
 			break
@@ -52,37 +52,6 @@ def read_byte_lua(num):
 	code += b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(num)) + b')) '
 	code += b'io.stdout:write(" ") '
 	return code
-
-
-def send_byte_read_command():
-	proc.stdin.write(b'io.stdout:write("pass\\n") ')
-	code = b''
-	for i in range(ram_size):
-		code += b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(i)) + b')) '
-		code += b'io.stdout:write(" ") '
-	code += b'io.stdout:write("\\n") io.stdout:write("continue\\n") '
-	proc.stdin.write(code)
-	proc.stdin.flush()
-
-
-def receive_bytes_from_lua():
-	global state_num
-	new_line = b''
-
-	while new_line != b'pass\n':
-		new_line = proc.stdout.readline()
-
-	print("Got the pass.")
-	new_line = proc.stdout.readline()
-	nums = new_line[:-1].split()
-	print(nums)
-	state_num = nums
-
-	new_line = proc.stdout.readline()
-	while new_line != b'continue\n':
-		new_line = proc.stdout.readline()
-	print("Got the cont.")
-
 
 # 0F34 for score
 # 0094(148) 0095(149)
@@ -98,7 +67,60 @@ def get_x_location():
 		print(int.from_bytes(read_byte, byteorder="little", signed=False))
 	except IndexError:
 		print("Errored!")
+
+
+def send_byte_read_command():
+	proc.stdin.write(b'io.stdout:write("pass\\n") ')
+	code = b''
+	for i in range(ram_size):
+		code += b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(i)) + b')) '
+		code += b'io.stdout:write(" ") '
+	code += b'io.stdout:write("\\n") io.stdout:write("continue\\n") '
+	proc.stdin.write(code)
+	proc.stdin.flush()
+
+
+def send_byte_bulk_read_command():
+	proc.stdin.write(b'io.stdout:write("pass\\n") ')
+	code = b''
+	code += b'io.stdout:write(serialize(mainmemory.readbyterange(0, 4098)) )'
+	code += b'io.stdout:write(" ") '
+	code += b'io.stdout:write("\\n") io.stdout:write("continue\\n") '
+	proc.stdin.write(code)
+	proc.stdin.flush()
+
+
+def receive_bytes_from_lua():
+	global state_num
+	new_line = b''
+
+	while new_line != b'pass\n':
+		new_line = proc.stdout.readline()
+
+	new_line = proc.stdout.readline()
+	nums = new_line[:-1].split()
+	state_num = nums
+
+	new_line = proc.stdout.readline()
+	while new_line != b'continue\n':
+		new_line = proc.stdout.readline()
+	return state_num
+
 	# print(int.from_bytes(read_bytes[1], byteorder="little"))
+
+
+def get_ram_state():
+	send_byte_bulk_read_command()
+	byte_values = receive_bytes_from_lua()[1:-1]
+	results = []
+	for byte_value in byte_values:
+		results.append(int(byte_value[:-1]))
+	print(byte_values)
+	print(results)
+	# byte_values = receive_bytes_from_lua()
+	# RAM_state = []
+	# for byte_value in byte_values:
+	#	RAM_state.append(int.from_bytes(byte_value, byteorder="little", signed=False))
 
 
 proc = start_bizhawk_process()
@@ -112,7 +134,7 @@ while True:
 	proc.stdin.write(b'emu.frameadvance() ')
 	# send_byte_read_command()
 	# receive_bytes_from_lua()
-	get_x_location()
-	for _ in range(16):
+	get_ram_state()
+	for _ in range(1):
 		proc.stdin.write(b'emu.frameadvance() ')
 		proc.stdin.flush()
