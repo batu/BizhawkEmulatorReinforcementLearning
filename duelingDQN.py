@@ -1,14 +1,17 @@
 import gym_bizhawk
+import os
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten
 from keras.optimizers import Adam
+from keras import callbacks
 
 from rl.agents.dqn import DQNAgent
 from rl.policy import EpsGreedyQPolicy
 from rl.memory import SequentialMemory
 
-
+TB_path = "Results/TensorBoard/"
+models_path = "Results/Models/"
 ENV_NAME = 'BizHawk-v0'
 
 # Get the environment and extract the number of actions.
@@ -20,14 +23,16 @@ window_length = 1
 print(env.observation_space.shape)
 model = Sequential()
 model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
-model.add(Dense(16))
+model.add(Dense(64))
 model.add(Activation('relu'))
-model.add(Dense(16))
+model.add(Dense(64))
 model.add(Activation('relu'))
-model.add(Dense(16))
+model.add(Dense(64))
 model.add(Activation('relu'))
 model.add(Dense(nb_actions, activation='linear'))
 # print(model.summary())
+
+# for i,v in ipairs({1,2,3}) do print(i,v) end
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
@@ -35,17 +40,24 @@ memory = SequentialMemory(limit=50000, window_length=window_length)
 policy = EpsGreedyQPolicy()
 # enable the dueling network
 # you can specify the dueling_type to one of {'avg','max','naive'}
-dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100,
-               enable_dueling_network=True, dueling_type='avg', target_model_update=1e-3, policy=policy)
+dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100, enable_dueling_network=True, dueling_type='avg', target_model_update=1e-3, policy=policy)
+
 dqn.compile(Adam(lr=1e-4), metrics=['mae'])
 
 # Okay, now it's time to learn something! We visualize the training here for show, but this
 # slows down training quite a lot. You can always safely abort the training prematurely using
 # Ctrl + C.
-dqn.fit(env, nb_steps=50000, visualize=True, verbose=0)
+folder_count = len([f for f in os.listdir(TB_path)])
+tb_folder_path = f'{TB_path}DQN_{ENV_NAME}_run{folder_count + 1}'
+os.mkdir(tb_folder_path)
+dqn.fit(env, nb_steps=450000, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
+
+
+file_count = len([f for f in os.listdir(models_path) if os.path.isfile(os.path.join(models_path, f))])
+
 
 # After training is done, we save the final weights.
-dqn.save_weights('DQN_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
+dqn.save_weights('{}\DQN_{}_run{}_weights.h5f'.format(models_path, ENV_NAME, file_count + 1), overwrite=True)
 
 # Finally, evaluate our algorithm for 5 episodes.
 dqn.test(env, nb_episodes=5, visualize=True)
