@@ -7,12 +7,12 @@ from keras.optimizers import Adam
 from keras import callbacks
 
 from rl.agents.dqn import DQNAgent
-from rl.policy import EpsGreedyQPolicy
+from rl.policy import EpsGreedyQPolicy, BoltzmannQPolicy
 from rl.memory import SequentialMemory
 
-TB_path = "Results/TensorBoard/"
+TB_path = "Results/TensorBoard/V1"
 models_path = "Results/Models/"
-ENV_NAME = 'BizHawk-v0'
+ENV_NAME = 'BizHawk-v1'
 
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
@@ -25,9 +25,9 @@ model = Sequential()
 model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
 model.add(Dense(64))
 model.add(Activation('relu'))
-model.add(Dense(64))
+model.add(Dense(128))
 model.add(Activation('relu'))
-model.add(Dense(64))
+model.add(Dense(128))
 model.add(Activation('relu'))
 model.add(Dense(nb_actions, activation='linear'))
 # print(model.summary())
@@ -37,12 +37,12 @@ model.add(Dense(nb_actions, activation='linear'))
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
 memory = SequentialMemory(limit=50000, window_length=window_length)
-policy = EpsGreedyQPolicy()
+policy = BoltzmannQPolicy()
 # enable the dueling network
 # you can specify the dueling_type to one of {'avg','max','naive'}
 dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100, enable_dueling_network=True, dueling_type='avg', target_model_update=1e-3, policy=policy)
 
-dqn.compile(Adam(lr=1e-4), metrics=['mae'])
+dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 
 # Okay, now it's time to learn something! We visualize the training here for show, but this
 # slows down training quite a lot. You can always safely abort the training prematurely using
@@ -50,7 +50,7 @@ dqn.compile(Adam(lr=1e-4), metrics=['mae'])
 folder_count = len([f for f in os.listdir(TB_path)])
 tb_folder_path = f'{TB_path}DQN_{ENV_NAME}_run{folder_count + 1}'
 os.mkdir(tb_folder_path)
-dqn.fit(env, nb_steps=450000, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
+dqn.fit(env, nb_steps=100000, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
 
 
 file_count = len([f for f in os.listdir(models_path) if os.path.isfile(os.path.join(models_path, f))])
