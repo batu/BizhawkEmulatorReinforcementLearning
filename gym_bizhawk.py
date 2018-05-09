@@ -20,17 +20,20 @@ rom_name = 'SuperMarioWorld.smc'
 data_dirs = 'Data/'
 model_dirs = 'Model/'
 state_dirs = 'States/'
+results_dir = "Results/"
 
 
 class BizHawk(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, state_representation="SS", state_frame_count=0):
+    # state_representation SS or RAM
+    def __init__(self, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=0):
         self.__version__ = "0.1.0"
         print("BizHawk - Version {}".format(self.__version__))
 
         state_frame_count = 1 if state_frame_count < 1 else state_frame_count
         self.state_representation = state_representation
+        self.reward_representation = reward_representation
 
         self.target_vector = []
         self.current_vector = []
@@ -42,14 +45,14 @@ class BizHawk(gym.Env):
         print("Initilized variables.")
         print("Started loading models.")
 
-        self.original_embedding = np.load(model_dirs + 'embedding.npy')
-        # self.input_model = load_model(model_dirs + 'input_model.h5')
-        self.embedded_model = load_model(model_dirs + 'embedded_model.h5')
-        self.inception = InceptionV3(weights='imagenet')
-        self.max_embedding = np.amax(self.original_embedding, axis=0)
-        self.min_embedding = np.amin(self.original_embedding, axis=0)
-
-        print("Done loading models.")
+        if(self.state_representation == "SS"):
+            self.original_embedding = np.load(model_dirs + 'embedding.npy')
+            # self.input_model = load_model(model_dirs + 'input_model.h5')
+            self.embedded_model = load_model(model_dirs + 'embedded_model.h5')
+            self.inception = InceptionV3(weights='imagenet')
+            self.max_embedding = np.amax(self.original_embedding, axis=0)
+            self.min_embedding = np.amin(self.original_embedding, axis=0)
+            print("Done loading models.")
 
         self.EPISODE_LENGTH = 512
         self.ACTION_LENGTH = 12
@@ -67,7 +70,9 @@ class BizHawk(gym.Env):
         self.action_dict = {
             0: "A",
             1: "Right",
-            2: "B"
+            2: "Left",
+            3: "Down",
+            4: "B"
         }
 
         self.action_space = spaces.Discrete(len(self.action_dict))
@@ -88,7 +93,8 @@ class BizHawk(gym.Env):
         self.observation_space = spaces.Box(low, high)
 
         # Store what the agent tried
-        self.curr_episode = -1
+        self.curr_episode = 0
+        self.curr_step = 0
         self.action_episode_memory = []
 
         print("Starting BizHawk.")
@@ -107,17 +113,18 @@ class BizHawk(gym.Env):
             debug_info (dict) :
         """
 
-        self.curr_episode += 1
         self._take_action(action)
+        self.curr_step += 1
         reward = self._get_reward()
         self.cumulative_reward += reward
         ob = self._get_state()
-        episode_over = self.curr_episode >= self.EPISODE_LENGTH
+        episode_over = self.curr_step >= self.EPISODE_LENGTH
         return ob, reward, episode_over, {}
 
     def reset(self):
         print("For episode {} the cumulative_reward was {}.".format(self.curr_episode, self.cumulative_reward))
-        self.curr_episode = -1
+        self.curr_episode += 1
+        self.curr_step = 0
         self.cumulative_reward = 0
         self.update_target_vector()
 
@@ -132,16 +139,19 @@ class BizHawk(gym.Env):
 
     def _get_state(self):
         self.update_current_vector_bizhawk_screenshot()
+        return self.current_vector
+
         # self.update_target_vector_normalized_random()
         if self.state_representation == "SS":
-            return self.current_vector
+            if self.memory_count > 1:
+                combined_state = np.append(self.memory_vectors, self.target_vector)
+            else:
+                combined_state = np.append(self.current_vector, self.target_vector)
+            return combined_state
 
-        if self.memory_count > 1:
-            combined_state = np.append(self.memory_vectors, self.target_vector)
-        else:
-            combined_state = np.append(self.current_vector, self.target_vector)
+        if self.state_representation == "RAM":
+            pass
         # print(self.cumulative_reward)
-        return combined_state
 
     def _take_action(self, action):
         selected_action = self.action_dict[action]
