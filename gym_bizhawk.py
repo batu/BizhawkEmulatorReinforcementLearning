@@ -27,7 +27,7 @@ class BizHawk(gym.Env):
     metadata = {'render.modes': ['human']}
 
     # state_representation SS or RAM
-    def __init__(self, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=0):
+    def __init__(self, algorithm_name="DQN", state_representation="RAM", reward_representation="DISTANCE", state_frame_count=0):
         self.__version__ = "0.1.0"
         print("BizHawk - Version {}".format(self.__version__))
 
@@ -38,6 +38,7 @@ class BizHawk(gym.Env):
         self.target_vector = []
         self.current_vector = []
         self.last_distance = 0
+        self.last_state = []
 
         self.paths = []
         self.data_paths = glob(data_dirs + '*')
@@ -45,17 +46,17 @@ class BizHawk(gym.Env):
         print("Initilized variables.")
         print("Started loading models.")
 
-        if(self.state_representation == "SS"):
-            self.original_embedding = np.load(model_dirs + 'embedding.npy')
-            # self.input_model = load_model(model_dirs + 'input_model.h5')
-            self.embedded_model = load_model(model_dirs + 'embedded_model.h5')
-            self.inception = InceptionV3(weights='imagenet')
-            self.max_embedding = np.amax(self.original_embedding, axis=0)
-            self.min_embedding = np.amin(self.original_embedding, axis=0)
-            print("Done loading models.")
+        self.original_embedding = np.load(model_dirs + 'embedding.npy')
+        # self.input_model = load_model(model_dirs + 'input_model.h5')
+        self.embedded_model = load_model(model_dirs + 'embedded_model.h5')
+        self.inception = InceptionV3(weights='imagenet')
+        self.max_embedding = np.amax(self.original_embedding, axis=0)
+        self.min_embedding = np.amin(self.original_embedding, axis=0)
+        print("Done loading models.")
 
         self.EPISODE_LENGTH = 512
-        self.ACTION_LENGTH = 12
+        self.ACTION_LENGTH = 8
+        self.curr_action_step = 0
 
         self.last_cos_similarity = 0
         self.cumulative_reward = 0
@@ -80,10 +81,15 @@ class BizHawk(gym.Env):
         self.memory_vectors = []
         self.memory_count = state_frame_count
 
+        self.current_RAM_state = []
         if self.state_representation == "RAM":
             unit_state_size = 4096
+            self.current_RAM_state = np.zeros(4096)
+
         elif self.state_representation == "SS":
             unit_state_size = 256
+            for _ in range(20):
+                print("REMEMBER TO TURN ON UPDATE RESET IF CHANGED TO SS.")
 
         for _ in range(self.memory_count):
             self.memory_vectors.append(np.zeros(unit_state_size))
@@ -126,7 +132,8 @@ class BizHawk(gym.Env):
         self.curr_episode += 1
         self.curr_step = 0
         self.cumulative_reward = 0
-        self.update_target_vector()
+
+        # self.update_target_vector()
 
         self.proc.stdin.write(b'client.speedmode(400) ')
         self.proc.stdin.write(b'savestate.loadslot(1) ')
@@ -138,20 +145,40 @@ class BizHawk(gym.Env):
         return
 
     def _get_state(self):
-        self.update_current_vector_bizhawk_screenshot()
-        return self.current_vector
+        def only_current_vector():
+            self.update_current_vector_bizhawk_screenshot()
+            return self.current_vector
 
-        # self.update_target_vector_normalized_random()
-        if self.state_representation == "SS":
+        def current_vector_plus_target():
             if self.memory_count > 1:
                 combined_state = np.append(self.memory_vectors, self.target_vector)
             else:
                 combined_state = np.append(self.current_vector, self.target_vector)
             return combined_state
 
-        if self.state_representation == "RAM":
-            pass
+        def RAM_4096_state():
+            ram_state = self.get_ram_state()
+            if ram_state:
+                self.current_RAM_state = ram_state
+            return self.current_RAM_state
         # print(self.cumulative_reward)
+        return RAM_4096_state()
+
+    def get_ram_state(self, normalize=True):
+        self.send_byte_read_command()
+        byte_values = self.receive_bytes_from_lua()[1:-1]
+        RAM_state = []
+        # For some reason I cant get 4096 numbers, so reading 97 and slicing one off
+        for byte_value in byte_values[:-1]:
+            RAM_state.append(int(byte_value[:-1]))
+#            RAM_state.append(int.from_bytes(byte_value, byteorder="little", signed=True))
+        if normalize:
+            max_val = max(RAM_state)
+            min_val = min(RAM_state)
+            RAM_state_normalized = [val - min_val / max_val - min_val for val in RAM_state]
+            return RAM_state_normalized
+        else:
+            return RAM_state
 
     def _take_action(self, action):
         selected_action = self.action_dict[action]
@@ -199,7 +226,7 @@ class BizHawk(gym.Env):
 
             try:
                 read_byte = new_line[:-1].split()[0]
-                distance = int.from_bytes(read_byte, byteorder="little", signed=False) - 48
+                distance = int(read_byte)
             except IndexError:
                 print("Index error!")
                 distance = self.last_distance
@@ -215,9 +242,9 @@ class BizHawk(gym.Env):
             if delta > 0:
                 reward = 1
             elif delta < 0:
-                reward = -.3
+                reward = -1.1
             else:
-                reward = 0.005
+                reward = -0.005
             self.last_distance = distance
             return reward
 
@@ -275,15 +302,13 @@ class BizHawk(gym.Env):
     def send_byte_read_command(self):
         self.proc.stdin.write(b'io.stdout:write("pass\\n") ')
         code = b''
-        for i in range(4096):
-            code += b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(i)) + b')) '
-            code += b'io.stdout:write(" ") '
+        code += b'io.stdout:write(serialize(mainmemory.readbyterange(0, 4098)) )'
+        code += b'io.stdout:write(" ") '
         code += b'io.stdout:write("\\n") io.stdout:write("continue\\n") '
         self.proc.stdin.write(code)
         self.proc.stdin.flush()
 
     def receive_bytes_from_lua(self):
-        global state_num
         new_line = b''
 
         while new_line != b'pass\n':
@@ -296,6 +321,14 @@ class BizHawk(gym.Env):
         new_line = self.proc.stdout.readline()
         while new_line != b'continue\n':
             new_line = self.proc.stdout.readline()
+
+        self.proc.stdin.write(b'io.stdout:write("DoneReward\\n") ')
+        self.proc.stdin.flush()
+
+        new_line = self.proc.stdout.readline()
+        while new_line not in b'DoneReward\n':
+            new_line = self.proc.stdout.readline()
+        return state_num
 
     def start_bizhawk_process(self):
         win_unicode_console.enable()
