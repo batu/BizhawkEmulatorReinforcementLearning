@@ -53,20 +53,23 @@ def read_byte_lua(num):
 	code += b'io.stdout:write(" ") '
 	return code
 
+
 # 0F34 for score
 # 0094(148) 0095(149)
 def get_x_location():
-	code = b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(149)) + b')) '
-	code += b'io.stdout:write(" ") '
+	proc.stdin.write(b'io.stdout:write("Start\\n") ')
+	code = b'io.stdout:write(serialize(mainmemory.readbyterange(147, 3)) )'
 	proc.stdin.write(code)
 	proc.stdin.flush()
-	new_line = proc.stdout.readline()
 
-	try:
-		read_byte = new_line[:-1].split()[0]
-		print(int.from_bytes(read_byte, byteorder="little", signed=False))
-	except IndexError:
-		print("Errored!")
+	new_line = proc.stdout.readline()
+	while new_line != b'Start\n':
+		new_line = proc.stdout.readline()
+
+	new_line = proc.stdout.readline().split()[1:-1]
+	dist_1 = new_line[0][:-1]
+	dist_2 = new_line[1]
+	print((int(dist_1) + int(dist_2) * 255) / 10)
 
 
 def send_byte_read_command():
@@ -134,7 +137,7 @@ while True:
 	proc.stdin.write(b'emu.frameadvance() ')
 	# send_byte_read_command()
 	# receive_bytes_from_lua()
-	get_ram_state()
-	for _ in range(1):
+	get_x_location()
+	for _ in range(12):
 		proc.stdin.write(b'emu.frameadvance() ')
 		proc.stdin.flush()
