@@ -28,7 +28,7 @@ class BizHawk(gym.Env):
 
 	# state_representation SS or RAM
 	def __init__(self, algorithm_name="DQN", state_representation="RAM", reward_representation="DISTANCE", state_frame_count=0):
-		self.__version__ = "0.1.0"
+		self.__version__ = "1.0.0"
 		print("BizHawk - Version {}".format(self.__version__))
 
 		state_frame_count = 1 if state_frame_count < 1 else state_frame_count
