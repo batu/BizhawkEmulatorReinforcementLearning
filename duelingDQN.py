@@ -2,7 +2,7 @@ import gym_bizhawk
 import os
 
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Flatten
+from keras.layers import Dense, Activation, Flatten, Conv2D, MaxPooling2D, Reshape
 from keras.optimizers import Adam
 from keras import callbacks
 
@@ -10,7 +10,7 @@ from rl.agents.dqn import DQNAgent
 from rl.policy import EpsGreedyQPolicy, BoltzmannQPolicy
 from rl.memory import SequentialMemory
 
-TB_path = "Results/TensorBoard/V1"
+TB_path = "Results/TensorBoard/V1/"
 models_path = "Results/Models/"
 ENV_NAME = 'BizHawk-v1'
 
@@ -20,20 +20,36 @@ env = gym_bizhawk.BizHawk()
 nb_actions = env.action_space.n
 window_length = 1
 
-print(env.observation_space.shape)
-model = Sequential()
-model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
-model.add(Dense(64))
-model.add(Activation('relu'))
-model.add(Dense(128))
-model.add(Activation('relu'))
-model.add(Dense(128))
-model.add(Activation('relu'))
-model.add(Dense(nb_actions, activation='linear'))
+# Sequential Model
+# print(env.observation_space.shape)
+# model = Sequential()
+# model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
+# model.add(Dense(128))
+# model.add(Activation('relu'))
+# model.add(Dense(256))
+# model.add(Activation('relu'))
+# model.add(Dense(256))
+# model.add(Activation('relu'))
+# model.add(Dense(nb_actions, activation='linear'))
 # print(model.summary())
 
-# for i,v in ipairs({1,2,3}) do print(i,v) end
 
+# CONV Model
+print(env.observation_space.shape)
+model = Sequential()
+model.add(Reshape((224, 256, 3), input_shape=(1, 1, 224, 256, 3)))
+model.add(Conv2D(16, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(32, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(32, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(32, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Flatten())
+model.add(Dense(32, activation='relu'))
+model.add(Dense(nb_actions, activation='linear'))
+print(model.summary())
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
 memory = SequentialMemory(limit=50000, window_length=window_length)
