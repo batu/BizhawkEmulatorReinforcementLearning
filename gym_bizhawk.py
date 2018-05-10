@@ -27,7 +27,7 @@ class BizHawk(gym.Env):
 	metadata = {'render.modes': ['human']}
 
 	# state_representation SS or RAM
-	def __init__(self, algorithm_name="DQN", state_representation="RAM", reward_representation="DISTANCE", state_frame_count=0):
+	def __init__(self, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=0):
 		self.__version__ = "1.0.0"
 		print("BizHawk - Version {}".format(self.__version__))
 
@@ -160,14 +160,14 @@ class BizHawk(gym.Env):
 			ram_state = self.get_ram_state()
 			if ram_state:
 				self.current_RAM_state = ram_state
-
 			return self.current_RAM_state
 
 		def pixel_state():
+			# Possibly do some more data munging.
 			return self.get_pixel_data()
 
 		# print(self.cumulative_reward)
-		return pixel_state()
+		return only_current_vector()
 
 	def get_ram_state(self, normalize=True):
 		self.send_byte_read_command()
