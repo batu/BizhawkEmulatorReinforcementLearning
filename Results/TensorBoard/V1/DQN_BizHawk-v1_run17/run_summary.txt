@@ -1,77 +1,42 @@
-import gym
-from gym import spaces
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+flatten_1 (Flatten)          (None, 256)               0         
+_________________________________________________________________
+dense_1 (Dense)              (None, 256)               65792     
+_________________________________________________________________
+activation_95 (Activation)   (None, 256)               0         
+_________________________________________________________________
+dense_2 (Dense)              (None, 128)               32896     
+_________________________________________________________________
+activation_96 (Activation)   (None, 128)               0         
+_________________________________________________________________
+dense_3 (Dense)              (None, 64)                8256      
+_________________________________________________________________
+activation_97 (Activation)   (None, 64)                0         
+_________________________________________________________________
+dense_4 (Dense)              (None, 5)                 325       
+=================================================================
+Total params: 107,269
+Trainable params: 107,269
+Non-trainable params: 0
+_________________________________________________________________
 
-import numpy as np
-from scipy import spatial
+window_length = 1
 
-from keras.models import load_model
-from keras.applications.inception_v3 import InceptionV3
-from scipy.misc import imread
-from skimage.transform import resize
-from glob import glob
-import subprocess
-import win_unicode_console
-import os
+memory = SequentialMemory(limit=50000, window_length=window_length)
+policy = BoltzmannQPolicy()
 
-# Director paths
-bizhawk_dirs = 'BizHawk/'
-rom_dirs = 'Rom/'
-rom_name = 'SuperMarioWorld.smc'
-data_dirs = 'Data/'
-model_dirs = 'Model/'
-state_dirs = 'States/'
-results_dir = "Results/"
+dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100, enable_dueling_network=True, dueling_type='avg', target_model_update=1e-3, policy=policy)
 
+dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 
-class BizHawk(gym.Env):
-	metadata = {'render.modes': ['human']}
+dqn.fit(env, nb_steps=1025, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
 
-	# state_representation SS or RAM
-	def __init__(self, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=0):
-		self.__version__ = "1.0.0"
-		print("BizHawk - Version {}".format(self.__version__))
-
-		state_frame_count = 1 if state_frame_count < 1 else state_frame_count
-		self.state_representation = state_representation
-		self.reward_representation = reward_representation
-
-		self.target_vector = []
-		self.current_vector = []
-		self.last_distance = 0
-		self.last_state = []
-
-		self.paths = []
-		self.data_paths = glob(data_dirs + '*')
-
-		print("Initilized variables.")
-		print("Started loading models.")
-
-		self.original_embedding = np.load(model_dirs + 'embedding.npy')
-		# self.input_model = load_model(model_dirs + 'input_model.h5')
-		self.embedded_model = load_model(model_dirs + 'embedded_model.h5')
-		self.inception = InceptionV3(weights='imagenet')
-		self.max_embedding = np.amax(self.original_embedding, axis=0)
-		self.min_embedding = np.amin(self.original_embedding, axis=0)
-		print("Done loading models.")
-
-		# BREADCRUMBS_START
+		# This is the action space.
 		self.EPISODE_LENGTH = 512
 		self.ACTION_LENGTH = 12
-		# BREADCRUMBS_END
 
-		self.curr_action_step = 0
-
-		self.last_cos_similarity = 0
-		self.cumulative_reward = 0
-
-		# This will probably be Discrete(33) for all decided actionsself.
-		# Currently:
-		# 0 : Noop
-		# 1 : Jump
-		# 2 : Left
-		# 3 : Right
-
-		# BREADCRUMBS_START
 		# This is the action space.
 		self.action_dict = {
 			0: "A",
@@ -80,7 +45,7 @@ class BizHawk(gym.Env):
 			3: "Down",
 			4: "B"
 		}
-		# BREADCRUMBS_END
+
 		self.action_space = spaces.Discrete(len(self.action_dict))
 
 		self.memory_vectors = []
@@ -171,10 +136,10 @@ class BizHawk(gym.Env):
 			# Possibly do some more data munging.
 			return self.get_pixel_data()
 
-		# BREADCRUMBS_START
+
 		# This is the state
 		return only_current_vector_from_ss()
-		# BREADCRUMBS_END
+
 
 	def get_ram_state(self, normalize=True):
 		self.send_byte_read_command()
@@ -263,7 +228,7 @@ class BizHawk(gym.Env):
 				new_line = self.proc.stdout.readline()
 
 			delta = distance - self.last_distance
-			# BREADCRUMBS_START
+
 			# The reward amounts
 			if delta > 0:
 				reward = 1
@@ -271,50 +236,10 @@ class BizHawk(gym.Env):
 				reward = -1
 			else:
 				reward = -0.005
-			# BREADCRUMBS_END
-			self.last_distance = distance
-			return reward
 
-		def distance_x_location():
-			self.proc.stdin.write(b'io.stdout:write("Start\\n") ')
-			code = b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(149)) + b')) '
-			code += b'io.stdout:write(" ") '
-			self.proc.stdin.write(code)
-			self.proc.stdin.flush()
-
-			new_line = self.proc.stdout.readline()
-			while new_line != b'Start\n':
-				new_line = self.proc.stdout.readline()
-			new_line = self.proc.stdout.readline()
-
-			try:
-				read_byte = new_line[:-1].split()[0]
-				distance = int(read_byte)
-			except IndexError:
-				print("Index error!")
-				distance = self.last_distance
-
-			self.proc.stdin.write(b'io.stdout:write("DoneReward\\n") ')
-			self.proc.stdin.flush()
-
-			new_line = self.proc.stdout.readline()
-			while new_line not in b'DoneReward\n':
-				new_line = self.proc.stdout.readline()
-
-			delta = distance - self.last_distance
-			if delta > 0:
-				reward = 1
-			elif delta < 0:
-				reward = -1
-			else:
-				reward = -0.005
-			self.last_distance = distance
-			return reward
-
-		# BREADCRUMBS_START
 		# This is the reward function.
 		return get_fine_grain_x_location()
-		# BREADCRUMBS_END
+
 
 	def update_current_vector_bizhawk_screenshot(self):
 		self.proc.stdin.flush()
