@@ -91,7 +91,6 @@ for k in [1, 2, 4, 8, 16, 32, 64, 128]:
         json_string = model.to_json()
         json.dump(json_string, outfile)
 
-
     # This function saves all the important hypterparameters to the run summary file.
     save_hyperparameters(["duelingDQN.py", "gym_bizhawk.py"], f"{tb_folder_path}/run_summary.txt")
 
@@ -117,3 +116,5 @@ for k in [1, 2, 4, 8, 16, 32, 64, 128]:
     # Finally, evaluate our algorithm for 5 episodes.
     # movie.save("C:/Users/user/Desktop/VideoGame Ret/RL Retrieval/movie")
     # dqn.test(env, nb_episodes=1, visualize=False)
+
+    time.sleep(5)
