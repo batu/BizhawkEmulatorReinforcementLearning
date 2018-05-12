@@ -100,7 +100,7 @@ for k in [1, 2, 4, 8, 16, 32, 64, 128]:
     print("Training has started!")
     # BREADCRUMBS_START
     # try:
-    dqn.fit(env, nb_steps=10 * 1, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
+    dqn.fit(env, nb_steps=512 * 16, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
     # except OSError:
     #     print("OS ERROR OCCURED.")
     #     print("If this is not a emulator switch.")
