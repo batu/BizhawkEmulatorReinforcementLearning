@@ -4,6 +4,8 @@ from gym import spaces
 import numpy as np
 from scipy import spatial
 
+import pyautogui
+
 from keras.models import load_model
 from keras.applications.inception_v3 import InceptionV3
 from scipy.misc import imread
@@ -12,6 +14,9 @@ from glob import glob
 import subprocess
 import win_unicode_console
 import os
+
+pyautogui.PAUSE = 1
+pyautogui.FAILSAFE = True
 
 # Director paths
 bizhawk_dirs = 'BizHawk/'
@@ -27,7 +32,7 @@ class BizHawk(gym.Env):
 	metadata = {'render.modes': ['human']}
 
 	# state_representation SS or RAM
-	def __init__(self, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=0):
+	def __init__(self, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=4, no_action=False, human_warm_up_episode=0):
 		self.__version__ = "1.0.0"
 		print("BizHawk - Version {}".format(self.__version__))
 
@@ -42,6 +47,7 @@ class BizHawk(gym.Env):
 
 		self.paths = []
 		self.data_paths = glob(data_dirs + '*')
+		self.no_action = no_action
 
 		print("Initilized variables.")
 		print("Started loading models.")
@@ -113,7 +119,8 @@ class BizHawk(gym.Env):
 
 		print("Load the game state.")
 		self.start_bizhawk_game()
-		print("Load succesful!")
+		# print("Load succesful!")
+		# self.start_recording_bizhawk()
 
 	def step(self, action):
 		"""
@@ -124,7 +131,10 @@ class BizHawk(gym.Env):
 			debug_info (dict) :
 		"""
 
-		self._take_action(action)
+		if self.no_action:
+			self._take_action(5)
+		else:
+			self._take_action(action)
 		self.curr_step += 1
 		reward = self._get_reward()
 		self.cumulative_reward += reward
@@ -154,6 +164,12 @@ class BizHawk(gym.Env):
 			self.update_current_vector_bizhawk_screenshot()
 			return self.current_vector
 
+		def current_vector_with_memory_from_ss():
+			self.update_current_vector_bizhawk_screenshot()
+			np_vectors = np.array(self.memory_vectors)
+			flat = np_vectors.reshape((256 * self.memory_count))
+			return flat
+
 		def current_vector_plus_target_from_ss():
 			if self.memory_count > 1:
 				combined_state = np.append(self.memory_vectors, self.target_vector)
@@ -173,7 +189,7 @@ class BizHawk(gym.Env):
 
 		# BREADCRUMBS_START
 		# This is the state
-		return only_current_vector_from_ss()
+		return current_vector_with_memory_from_ss()
 		# BREADCRUMBS_END
 
 	def get_ram_state(self, normalize=True):
@@ -209,7 +225,13 @@ class BizHawk(gym.Env):
 		return temp_img
 
 	def _take_action(self, action):
-		selected_action = self.action_dict[action]
+		# This is for  algorithms that epress action probablitiy distributionself.
+		# Current it is greedy
+		try:
+			selected_action = self.action_dict[action]
+		except TypeError:
+			key = action.tolist().index(max(action))
+			selected_action = self.action_dict[key]
 
 		for i in range(self.ACTION_LENGTH):
 			action_code = b''
@@ -225,22 +247,7 @@ class BizHawk(gym.Env):
 			self.proc.stdin.flush()
 
 	def _get_reward(self):
-		def plus_one_for_positivedelta():
-			cosine_similarity = 1 - spatial.distance.cosine(self.current_vector, self.target_vector)
-			if self.last_cos_similarity < cosine_similarity:
-				self.last_cos_similarity = cosine_similarity
-				return 1
-			else:
-				self.last_cos_similarity = cosine_similarity
-				return -1
-
-		def delta_in_similarity():
-			cosine_similarity = 1 - spatial.distance.cosine(self.current_vector, self.target_vector)
-			delta = cosine_similarity - self.last_cos_similarity
-			self.last_cos_similarity = cosine_similarity
-			return delta
-
-		def get_fine_grain_x_location():
+		def get_distance():
 			self.proc.stdin.write(b'io.stdout:write("Start\\n") ')
 			code = b'io.stdout:write(serialize(mainmemory.readbyterange(147, 3)) )'
 			self.proc.stdin.write(code)
@@ -262,58 +269,45 @@ class BizHawk(gym.Env):
 			while new_line not in b'DoneReward\n':
 				new_line = self.proc.stdout.readline()
 
+			return distance
+
+		def plus_one_for_positivedelta():
+			cosine_similarity = 1 - spatial.distance.cosine(self.current_vector, self.target_vector)
+			if self.last_cos_similarity < cosine_similarity:
+				self.last_cos_similarity = cosine_similarity
+				return 1
+			else:
+				self.last_cos_similarity = cosine_similarity
+				return -1
+
+		def delta_in_similarity():
+			cosine_similarity = 1 - spatial.distance.cosine(self.current_vector, self.target_vector)
+			delta = cosine_similarity - self.last_cos_similarity
+			self.last_cos_similarity = cosine_similarity
+			return delta
+
+		def one_for_any_increase_in_distance():
+			distance = get_distance()
 			delta = distance - self.last_distance
-			# BREADCRUMBS_START
+
 			# The reward amounts
 			if delta > 0:
 				reward = 1
 			elif delta < 0:
 				reward = -1
-			else:
-				reward = -0.005
-			# BREADCRUMBS_END
+
 			self.last_distance = distance
 			return reward
 
-		def distance_x_location():
-			self.proc.stdin.write(b'io.stdout:write("Start\\n") ')
-			code = b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(149)) + b')) '
-			code += b'io.stdout:write(" ") '
-			self.proc.stdin.write(code)
-			self.proc.stdin.flush()
-
-			new_line = self.proc.stdout.readline()
-			while new_line != b'Start\n':
-				new_line = self.proc.stdout.readline()
-			new_line = self.proc.stdout.readline()
-
-			try:
-				read_byte = new_line[:-1].split()[0]
-				distance = int(read_byte)
-			except IndexError:
-				print("Index error!")
-				distance = self.last_distance
-
-			self.proc.stdin.write(b'io.stdout:write("DoneReward\\n") ')
-			self.proc.stdin.flush()
-
-			new_line = self.proc.stdout.readline()
-			while new_line not in b'DoneReward\n':
-				new_line = self.proc.stdout.readline()
-
+		def distance_traveled_between_frames():
+			distance = get_distance()
 			delta = distance - self.last_distance
-			if delta > 0:
-				reward = 1
-			elif delta < 0:
-				reward = -1
-			else:
-				reward = -0.005
 			self.last_distance = distance
-			return reward
+			return delta
 
 		# BREADCRUMBS_START
-		# This is the reward function.
-		return get_fine_grain_x_location()
+		# The reward is:
+		return distance_traveled_between_frames()
 		# BREADCRUMBS_END
 
 	def update_current_vector_bizhawk_screenshot(self):
@@ -421,9 +415,41 @@ class BizHawk(gym.Env):
 			if started:
 				self.proc.stdin.write(b'client.speedmode(400) ')
 				self.proc.stdin.write(b'savestate.loadslot(1) ')
+				self.proc.stdin.write(b'emu.frameadvance() ')
+
 				self.proc.stdin.flush()
 				self.update_current_vector_bizhawk_screenshot()
 				break
 			else:
 				pass
 				# print(out_line)
+
+	def start_recording_bizhawk(self):
+
+		for _ in range(30):
+			self.proc.stdin.write(b'emu.frameadvance() ')
+			self.proc.stdin.flush()
+
+		pyautogui.moveTo(229, 180, duration=0.25)
+		pyautogui.click()
+		pyautogui.moveTo(229, 190, duration=0.25)
+		pyautogui.click()
+		pyautogui.moveTo(317, 396, duration=0.25)
+		pyautogui.click()
+		pyautogui.moveTo(504, 450, duration=0.25)
+		pyautogui.click()
+		pyautogui.moveTo(504, 350, duration=0.25)
+		pyautogui.click()
+		pyautogui.click()
+
+	def save_recording_bizhawk(self, dest: str):
+		self.proc.stdin.write(b'movie.save()')
+		self.proc.stdin.flush()
+
+	def shut_down_bizhawk_game(self):
+		print("Exiting bizhawk.")
+		for _ in range(1000):
+			self.proc.stdin.write(b'emu.frameadvance() ')
+			self.proc.stdin.flush()
+			self.proc.stdin.write(b'client.exit() ')
+			self.proc.stdin.flush()

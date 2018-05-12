@@ -1,4 +1,4 @@
-print("start")
+print("Started LUA code.")
 io.stdout:write('start ' .. gameinfo.getromname() .. '\n')
 
 print("Define serialize")

@@ -1,0 +1,51 @@
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+flatten_3 (Flatten)          (None, 1024)              0         
+_________________________________________________________________
+dense_7 (Dense)              (None, 4)                 4100      
+_________________________________________________________________
+dense_8 (Dense)              (None, 5)                 25        
+=================================================================
+Total params: 4,125
+Trainable params: 4,125
+Non-trainable params: 0
+_________________________________________________________________
+
+    window_length = 1
+
+    model = Sequential()
+    model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
+    model.add(Dense(k, activation='relu'))
+    model.add(Dense(nb_actions, activation='softmax'))
+
+    memory = SequentialMemory(limit=50000, window_length=window_length)
+    policy = BoltzmannQPolicy()
+
+    dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100, enable_dueling_network=True, dueling_type='avg', target_model_update=1e-3, policy=policy)
+
+    dqn.compile(Adam(lr=1e-3), metrics=['mae'])
+
+    # try:
+    dqn.fit(env, nb_steps=10 * 1, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
+    # except OSError:
+    #     print("OS ERROR OCCURED.")
+    #     print("If this is not a emulator switch.")
+
+		self.EPISODE_LENGTH = 512
+		self.ACTION_LENGTH = 12
+
+		# This is the action space.
+		self.action_dict = {
+			0: "A",
+			1: "Right",
+			2: "Left",
+			3: "Down",
+			4: "B"
+		}
+
+		# This is the state
+		return current_vector_with_memory_from_ss()
+
+		# The reward is:
+		return distance_traveled_between_frames()

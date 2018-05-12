@@ -126,6 +126,18 @@ def get_ram_state():
 	#	RAM_state.append(int.from_bytes(byte_value, byteorder="little", signed=False))
 
 
+def shut_down_bizhawk_game():
+	print("Exiting bizhawk.")
+	for _ in range(100):
+		try:
+			proc.stdin.write(b'emu.frameadvance() ')
+			proc.stdin.flush()
+			proc.stdin.write(b'client.exit() ')
+			proc.stdin.flush()
+		except:
+			return
+
+
 proc = start_bizhawk_process()
 start_bizhawk_game(proc)
 
@@ -137,7 +149,7 @@ while True:
 	proc.stdin.write(b'emu.frameadvance() ')
 	# send_byte_read_command()
 	# receive_bytes_from_lua()
-	get_x_location()
-	for _ in range(12):
+	for _ in range(1000):
 		proc.stdin.write(b'emu.frameadvance() ')
 		proc.stdin.flush()
+	shut_down_bizhawk_game()
