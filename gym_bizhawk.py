@@ -448,8 +448,11 @@ class BizHawk(gym.Env):
 
 	def shut_down_bizhawk_game(self):
 		print("Exiting bizhawk.")
-		for _ in range(1000):
-			self.proc.stdin.write(b'emu.frameadvance() ')
-			self.proc.stdin.flush()
-			self.proc.stdin.write(b'client.exit() ')
-			self.proc.stdin.flush()
+		try:
+			for _ in range(1000):
+				self.proc.stdin.write(b'emu.frameadvance() ')
+				self.proc.stdin.flush()
+				self.proc.stdin.write(b'client.exit() ')
+				self.proc.stdin.flush()
+		except OSError:
+			return
