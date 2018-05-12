@@ -1,0 +1,82 @@
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+flatten_1 (Flatten)          (None, 256)               0         
+_________________________________________________________________
+dense_1 (Dense)              (None, 256)               65792     
+_________________________________________________________________
+activation_95 (Activation)   (None, 256)               0         
+_________________________________________________________________
+dense_2 (Dense)              (None, 256)               65792     
+_________________________________________________________________
+activation_96 (Activation)   (None, 256)               0         
+_________________________________________________________________
+dense_3 (Dense)              (None, 128)               32896     
+_________________________________________________________________
+activation_97 (Activation)   (None, 128)               0         
+_________________________________________________________________
+dense_4 (Dense)              (None, 64)                8256      
+_________________________________________________________________
+activation_98 (Activation)   (None, 64)                0         
+_________________________________________________________________
+dense_5 (Dense)              (None, 32)                2080      
+_________________________________________________________________
+activation_99 (Activation)   (None, 32)                0         
+_________________________________________________________________
+dense_6 (Dense)              (None, 5)                 165       
+=================================================================
+Total params: 174,981
+Trainable params: 174,981
+Non-trainable params: 0
+_________________________________________________________________
+
+window_length = 1
+
+model = Sequential()
+model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
+model.add(Dense(256))
+model.add(Activation('relu'))
+model.add(Dense(256))
+model.add(Activation('relu'))
+model.add(Dense(128))
+model.add(Activation('relu'))
+model.add(Dense(64))
+model.add(Activation('relu'))
+model.add(Dense(32))
+model.add(Activation('relu'))
+model.add(Dense(nb_actions, activation='linear'))
+
+memory = SequentialMemory(limit=50000, window_length=window_length)
+policy = BoltzmannQPolicy()
+
+dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100, enable_dueling_network=True, dueling_type='avg', target_model_update=1e-3, policy=policy)
+
+dqn.compile(Adam(lr=1e-3), metrics=['mae'])
+
+dqn.fit(env, nb_steps=512 * 2, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
+
+		self.EPISODE_LENGTH = 512
+		self.ACTION_LENGTH = 12
+
+		# This is the action space.
+		self.action_dict = {
+			0: "A",
+			1: "Right",
+			2: "Left",
+			3: "Down",
+			4: "B"
+		}
+
+		# This is the state
+		return only_current_vector_from_ss()
+
+			# The reward amounts
+			if delta > 0:
+				reward = 1
+			elif delta < 0:
+				reward = -1
+			else:
+				reward = -0.005
+
+		# This is the reward function.
+		return get_fine_grain_x_location()
