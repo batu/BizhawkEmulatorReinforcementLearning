@@ -32,7 +32,7 @@ class BizHawk(gym.Env):
 	metadata = {'render.modes': ['human']}
 
 	# state_representation SS or RAM
-	def __init__(self, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=4, no_action=False, human_warm_up_episode=0):
+	def __init__(self, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=1, no_action=True, human_warm_up_episode=0):
 		self.__version__ = "1.0.0"
 		print("BizHawk - Version {}".format(self.__version__))
 
@@ -83,8 +83,10 @@ class BizHawk(gym.Env):
 			0: "A",
 			1: "Right",
 			2: "Left",
-			3: "Down",
-			4: "B"
+			3: "B",
+			4: ""
+			# 3: "Down",
+			# 4: "B"
 		}
 		# BREADCRUMBS_END
 		self.action_space = spaces.Discrete(len(self.action_dict))
@@ -132,7 +134,7 @@ class BizHawk(gym.Env):
 		"""
 
 		if self.no_action:
-			self._take_action(5)
+			self._take_action(4)
 		else:
 			self._take_action(action)
 		self.curr_step += 1
@@ -154,6 +156,7 @@ class BizHawk(gym.Env):
 		self.proc.stdin.write(b'savestate.loadslot(1) ')
 		self.proc.stdin.write(b'emu.frameadvance() ')
 		self.proc.stdin.flush()
+		self.last_distance = self.get_distance()
 		return self._get_state()
 
 	def render(self, mode='human', close=False):
@@ -246,31 +249,31 @@ class BizHawk(gym.Env):
 			self.proc.stdin.write(action_code)
 			self.proc.stdin.flush()
 
+	def get_distance(self):
+		self.proc.stdin.write(b'io.stdout:write("Start\\n") ')
+		code = b'io.stdout:write(serialize(mainmemory.readbyterange(147, 3)) )'
+		self.proc.stdin.write(code)
+		self.proc.stdin.flush()
+
+		new_line = self.proc.stdout.readline()
+		while new_line != b'Start\n':
+			new_line = self.proc.stdout.readline()
+
+		new_line = self.proc.stdout.readline().split()[1:-1]
+		dist_1 = new_line[0][:-1]
+		dist_2 = new_line[1]
+		distance = (int(dist_1) + int(dist_2) * 255) / 10
+
+		self.proc.stdin.write(b'io.stdout:write("DoneReward\\n") ')
+		self.proc.stdin.flush()
+
+		new_line = self.proc.stdout.readline()
+		while new_line not in b'DoneReward\n':
+			new_line = self.proc.stdout.readline()
+
+		return distance
+
 	def _get_reward(self):
-		def get_distance():
-			self.proc.stdin.write(b'io.stdout:write("Start\\n") ')
-			code = b'io.stdout:write(serialize(mainmemory.readbyterange(147, 3)) )'
-			self.proc.stdin.write(code)
-			self.proc.stdin.flush()
-
-			new_line = self.proc.stdout.readline()
-			while new_line != b'Start\n':
-				new_line = self.proc.stdout.readline()
-
-			new_line = self.proc.stdout.readline().split()[1:-1]
-			dist_1 = new_line[0][:-1]
-			dist_2 = new_line[1]
-			distance = (int(dist_1) + int(dist_2) * 255) / 10
-
-			self.proc.stdin.write(b'io.stdout:write("DoneReward\\n") ')
-			self.proc.stdin.flush()
-
-			new_line = self.proc.stdout.readline()
-			while new_line not in b'DoneReward\n':
-				new_line = self.proc.stdout.readline()
-
-			return distance
-
 		def plus_one_for_positivedelta():
 			cosine_similarity = 1 - spatial.distance.cosine(self.current_vector, self.target_vector)
 			if self.last_cos_similarity < cosine_similarity:
@@ -287,9 +290,10 @@ class BizHawk(gym.Env):
 			return delta
 
 		def one_for_any_increase_in_distance():
-			distance = get_distance()
+			distance = self.get_distance()
 			delta = distance - self.last_distance
 
+			reward = 0
 			# The reward amounts
 			if delta > 0:
 				reward = 1
@@ -299,8 +303,24 @@ class BizHawk(gym.Env):
 			self.last_distance = distance
 			return reward
 
+		# BREADCRUMBS_START
+		def plusone_increase_minus_half_decrease_or_stationary():
+			distance = self.get_distance()
+			delta = distance - self.last_distance
+
+			reward = -.5
+			# The reward amounts
+			if delta > 0:
+				reward = 1
+			elif delta < 0:
+				reward = -.5
+
+			self.last_distance = distance
+			return reward
+		# BREADCRUMBS_END
+
 		def distance_traveled_between_frames():
-			distance = get_distance()
+			distance = self.get_distance()
 			delta = distance - self.last_distance
 			self.last_distance = distance
 			return delta
