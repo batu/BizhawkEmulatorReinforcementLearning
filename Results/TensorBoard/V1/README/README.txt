@@ -1,4 +1,4 @@
-Experiment start time: Wed May 16 15:06:26 2018
+Experiment start time: Wed May 16 15:15:33 2018
 
 Algorithm:
 DQN.
