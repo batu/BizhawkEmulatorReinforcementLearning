@@ -16,10 +16,9 @@ from rl.memory import SequentialMemory
 
 REPLAY = False
 run_number = 21
-TB_path = "Results/TensorBoard/DQNSmall3/"
+TB_path = "Results/TensorBoard/V1/"
 models_path = "Results/Models/"
 ENV_NAME = 'BizHawk-v1'
-
 
 changes = """Reduced the state space reprsenetation from 1024, 4 concatination to 1."""
 reasoning = """The timeline information between frames might not be preserved between frames.
@@ -39,10 +38,10 @@ with open(f"{TB_path}/README.txt", "w") as readme:
     print(f"\nReasoning:\n{reasoning}", file=readme)
     print(f"\nHypothesis:\n{hypothesis}", file=readme)
     print(f"\nResults:\n", file=readme)
-    
+
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
-for k in range(20):
+for k in range(10):
     env = gym_bizhawk.BizHawk()
     nb_actions = env.action_space.n
     # BREADCRUMBS_START
@@ -52,11 +51,13 @@ for k in range(20):
     # Sequential Model
     print(env.observation_space.shape)
 
-# BREADCRUMBS_START
+    # BREADCRUMBS_START
     model = Sequential()
     model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
     model.add(Dense(2**k, activation='relu'))
-    model.add(Dense(nb_actions, activation='softmax'))
+    model.add(Dense(nb_actions, activation='linear'))
+
+    # Q value.
     # BREADCRUMBS_END
     model.summary()
 
@@ -75,7 +76,9 @@ for k in range(20):
     memory = SequentialMemory(limit=50000, window_length=window_length)
     policy = BoltzmannQPolicy()
 
-    dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100, enable_dueling_network=True, dueling_type='avg', target_model_update=1e-3, policy=policy)
+    dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
+           nb_steps_warmup=1024, gamma=.99, target_model_update=1,
+           train_interval=1, delta_clip=1.)
 
     dqn.compile(Adam(lr=1e-3), metrics=['mae'])
     # BREADCRUMBS_END
@@ -84,7 +87,7 @@ for k in range(20):
     # slows down training quite a lot. You can always safely abort the training prematurely using
     # Ctrl + C.
     folder_count = len([f for f in os.listdir(TB_path) if not os.path.isfile(os.path.join(models_path, f))])
-    run_name = f"DQN_{ENV_NAME}_run{folder_count}"
+    run_name = f"run{folder_count}"
     tb_folder_path = f'{TB_path}{run_name}'
 
     if REPLAY:
@@ -92,15 +95,15 @@ for k in range(20):
         tb_folder_path = f'{TB_path}{run_name}'
         with open(f"{tb_folder_path}/config.json", "r") as config:
             json_string = json.load(config)
-        model = model_from_json(json_string)
-        dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100, enable_dueling_network=True, dueling_type='avg', target_model_update=1e-3, policy=policy)
-        dqn.compile(Adam(lr=1e-3), metrics=['mae'])
-        dqn.load_weights('{}\DQN_{}_run{}_weights.h5f'.format(tb_folder_path, ENV_NAME, run_number))
-        print("Testing has started!")
-        dqn.test(env, nb_episodes=1, visualize=False)
-        print("Testing has started!")
-        env.shut_down_bizhawk_game()
-        exit()
+            model = model_from_json(json_string)
+            dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100, enable_dueling_network=True, dueling_type='avg', target_model_update=1e-3, policy=policy)
+            dqn.compile(Adam(lr=1e-3), metrics=['mae'])
+            dqn.load_weights('{}\DQN_{}_run{}_weights.h5f'.format(tb_folder_path, ENV_NAME, run_number))
+            print("Testing has started!")
+            dqn.test(env, nb_episodes=1, visualize=False)
+            print("Testing has started!")
+            env.shut_down_bizhawk_game()
+            exit()
 
     os.mkdir(tb_folder_path)
 
@@ -112,21 +115,21 @@ for k in range(20):
         json.dump(json_string, outfile)
 
     # This function saves all the important hypterparameters to the run summary file.
-    save_hyperparameters(["duelingDQN.py", "gym_bizhawk.py"], f"{tb_folder_path}/run_summary.txt")
+    save_hyperparameters(["DQN.py", "gym_bizhawk.py"], f"{tb_folder_path}/run_summary.txt")
 
     start_time_ascii = time.asctime(time.localtime(time.time()))
     start_time = time.time()
     print("Training has started!")
     # BREADCRUMBS_START
     # try:
-    dqn.fit(env, nb_steps=512 * 16, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
+    dqn.fit(env, nb_steps=512 * 32, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
     # except OSError:
     #     print("OS ERROR OCCURED.")
     #     print("If this is not a emulator switch.")
     # BREADCRUMBS_END
 
     # After training is done, we save the final weights.
-    dqn.save_weights('{}\DDQN_{}_run{}_weights.h5f'.format(tb_folder_path, ENV_NAME, folder_count), overwrite=True)
+    dqn.save_weights('{}\DQN_{}_run{}_weights.h5f'.format(tb_folder_path, ENV_NAME, folder_count), overwrite=True)
 
     total_run_time = round(time.time() - start_time, 2)
     print("Training is done.")
