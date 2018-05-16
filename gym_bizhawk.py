@@ -330,6 +330,8 @@ class BizHawk(gym.Env):
 
 		def distance_traveled_between_frames():
 			distance = self.get_distance()
+			if distance > 10000:
+				distance = self.last_distance
 			delta = distance - self.last_distance
 			self.last_distance = distance
 			return delta
