@@ -29,7 +29,7 @@ if len(hypothesis) + len(changes) + len(reasoning) < 140:
     print("NOT ENOUGH LOGGING INFO")
     exit()
 
-with open(f"{TB_path}/README.txt", "w") as readme:
+with open(f"{TB_path}/README/README.txt", "w") as readme:
     start_time_ascii = time.asctime(time.localtime(time.time()))
     algorithm = os.path.basename(__file__)[:-2]
     print(f"Experiment start time: {start_time_ascii}", file=readme)
@@ -42,7 +42,7 @@ with open(f"{TB_path}/README.txt", "w") as readme:
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
 for k in range(10):
-    env = gym_bizhawk.BizHawk()
+    env = gym_bizhawk.BizHawk(logging_folder_path=TB_path)
     nb_actions = env.action_space.n
     # BREADCRUMBS_START
     window_length = 1
@@ -56,8 +56,6 @@ for k in range(10):
     model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
     model.add(Dense(2**k, activation='relu'))
     model.add(Dense(nb_actions, activation='linear'))
-
-    # Q value.
     # BREADCRUMBS_END
     model.summary()
 
@@ -89,6 +87,7 @@ for k in range(10):
     folder_count = len([f for f in os.listdir(TB_path) if not os.path.isfile(os.path.join(models_path, f))])
     run_name = f"run{folder_count}"
     tb_folder_path = f'{TB_path}{run_name}'
+    env.run_name = run_name
 
     if REPLAY:
         run_name = f"DQN_{ENV_NAME}_run{run_number}"
