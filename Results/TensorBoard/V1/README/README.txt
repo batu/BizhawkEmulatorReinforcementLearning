@@ -1,4 +1,4 @@
-Experiment start time: Wed May 16 15:15:33 2018
+Experiment start time: Wed May 16 21:00:43 2018
 
 Algorithm:
 DQN.
@@ -14,4 +14,5 @@ Hypothesis:
 The training will be more stable.
 
 Results:
-
+The agent is definitly learning something. However the consistency isnt there.
+When you observe the agent you can see certain behavior patterns. It can reilably kill the first enemy and hesitates near the bullet bill.
