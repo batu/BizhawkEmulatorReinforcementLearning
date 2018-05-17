@@ -16,14 +16,13 @@ from rl.memory import SequentialMemory
 
 REPLAY = False
 run_number = 21
-TB_path = "Results/TensorBoard/V1/"
+TB_path = "WorkhorseResults/TensorBoard/W1/"
 models_path = "Results/Models/"
 ENV_NAME = 'BizHawk-v1'
 
-changes = """Reduced the state space reprsenetation from 1024, 4 concatination to 1."""
-reasoning = """The timeline information between frames might not be preserved between frames.
-This might be detrimental to the training as it might just add noise."""
-hypothesis = """The training will be more stable."""
+changes = """Made the model 1 layer deeper."""
+reasoning = """The single layer, even after the model, seems too shallow. I want to fine tune a bit better, and specifically, I am curious if there are any differences between 1 layer and 2 layers."""
+hypothesis = """There will not be any significant changes between a single layer and double layer set up."""
 
 if len(hypothesis) + len(changes) + len(reasoning) < 140:
     print("NOT ENOUGH LOGGING INFO")
@@ -54,6 +53,7 @@ for k in range(10):
     # BREADCRUMBS_START
     model = Sequential()
     model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
+    model.add(Dense(2**k + 1, activation='relu'))
     model.add(Dense(2**k, activation='relu'))
     model.add(Dense(nb_actions, activation='linear'))
     # BREADCRUMBS_END
@@ -75,7 +75,7 @@ for k in range(10):
     policy = BoltzmannQPolicy()
 
     dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-           nb_steps_warmup=1024, gamma=.99, target_model_update=1,
+           nb_steps_warmup=1024, gamma=.9, target_model_update=1,
            train_interval=1, delta_clip=1.)
 
     dqn.compile(Adam(lr=1e-3), metrics=['mae'])
