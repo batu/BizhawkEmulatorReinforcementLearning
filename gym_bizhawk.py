@@ -153,7 +153,7 @@ class BizHawk(gym.Env):
 		return ob, reward, episode_over, {}
 
 	def reset(self):
-		print(f"For episode {self.curr_episode} the cumulative_reward was {self.cumulative_reward:4.2} and the max reward was {self.max_cumulative_reward:4.2}.")
+		print(f"For episode {self.curr_episode} the cumulative_reward was {self.cumulative_reward:4.2f} and the max reward was {self.max_cumulative_reward:4.2f}.")
 		self.curr_episode += 1
 		self.curr_step = 0
 		self.write_graphs()
@@ -330,9 +330,10 @@ class BizHawk(gym.Env):
 
 		def distance_traveled_between_frames():
 			distance = self.get_distance()
-			if distance > 10000:
-				distance = self.last_distance
 			delta = distance - self.last_distance
+			if delta > 10000:
+				delta = 0
+				exit()
 			self.last_distance = distance
 			return delta
 
@@ -484,10 +485,10 @@ class BizHawk(gym.Env):
 	def write_graphs(self):
 		target = self.logging_folder_path + self.run_name
 		with open(f"{target}/max_reward.txt", "a+") as file:
-			file.write(f"{self.curr_episode},{self.max_cumulative_reward}")
+			file.write(f"{self.curr_episode},{self.max_cumulative_reward:4.4f}\n")
 
 		with open(f"{target}/cumulative_reward.txt", "a+") as file:
-			file.write(f"{self.curr_episode},{self.cumulative_reward}")
+			file.write(f"{self.curr_episode},{self.cumulative_reward:4.4f}\n")
 
 	def shut_down_bizhawk_game(self):
 		print("Exiting bizhawk.")
