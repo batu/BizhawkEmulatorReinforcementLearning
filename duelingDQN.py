@@ -39,7 +39,7 @@ with open(f"{TB_path}/README.txt", "w") as readme:
     print(f"\nReasoning:\n{reasoning}", file=readme)
     print(f"\nHypothesis:\n{hypothesis}", file=readme)
     print(f"\nResults:\n", file=readme)
-    
+
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
 for k in range(20):
