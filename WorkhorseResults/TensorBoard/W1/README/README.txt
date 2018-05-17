@@ -1,16 +1,16 @@
-Experiment start time: Wed May 16 15:34:48 2018
+Experiment start time: Wed May 16 21:23:57 2018
 
 Algorithm:
 DQN.
 
 The Changes:
-Reduced the gamme to .9 (from .99)
+Made the model 1 layer deeper.
 
 Reasoning:
-We do not need long term planning, we just want the agent to be more reactive. Shorter horizon should give us that
+The single layer, even after the model, seems too shallow. I want to fine tune a bit better, and specifically, I am curious if there are any differences between 1 layer and 2 layers.
 
 Hypothesis:
-The training will make the agent more reactive stable.
+There will not be any significant changes between a single layer and double layer set up.
 
 Results:
 
