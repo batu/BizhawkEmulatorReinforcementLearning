@@ -2,7 +2,7 @@ import gym_bizhawk
 import os
 import time
 import json
-from support_utils import save_hyperparameters, send_email
+from support_utils import save_hyperparameters, send_email, visualize_cumulative_reward, visualize_max_reward
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten, Conv2D, MaxPooling2D, Reshape
@@ -16,7 +16,19 @@ from rl.memory import SequentialMemory
 
 REPLAY = False
 run_number = 21
-TB_path = "Results/TensorBoard/V1/"
+experiment_name = "Test"
+
+TB_path = f"Results/TensorBoard/{experiment_name}/"
+try:
+    os.mkdir(TB_path[:-1])
+except:
+    pass
+
+try:
+    os.mkdir(f"{TB_path}README")
+except:
+    pass
+
 models_path = "Results/Models/"
 ENV_NAME = 'BizHawk-v1'
 
@@ -41,7 +53,7 @@ with open(f"{TB_path}/README/README.txt", "w") as readme:
 
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
-for k in range(1):
+for k in range(2):
     env = gym_bizhawk.BizHawk(logging_folder_path=TB_path)
     nb_actions = env.action_space.n
     # BREADCRUMBS_START
@@ -86,53 +98,64 @@ for k in range(1):
     # Ctrl + C.
     folder_count = len([f for f in os.listdir(TB_path) if not os.path.isfile(os.path.join(models_path, f))])
     run_name = f"run{folder_count}"
-    tb_folder_path = f'{TB_path}{run_name}'
+    run_path = f'{TB_path}{run_name}'
     env.run_name = run_name
 
     if REPLAY:
-        run_name = f"DQN_{ENV_NAME}_run{run_number}"
-        tb_folder_path = f'{TB_path}{run_name}'
-        with open(f"{tb_folder_path}/config.json", "r") as config:
+        run_name = f"run{run_number}"
+        run_path = f'{TB_path}{run_name}'
+        with open(f"{run_path}/config.json", "r") as config:
             json_string = json.load(config)
             model = model_from_json(json_string)
-            dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=100, enable_dueling_network=True, dueling_type='avg', target_model_update=1e-3, policy=policy)
+            dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
+                   nb_steps_warmup=1024, gamma=.99, target_model_update=1,
+                   train_interval=1, delta_clip=1.)
             dqn.compile(Adam(lr=1e-3), metrics=['mae'])
-            dqn.load_weights('{}\DQN_{}_run{}_weights.h5f'.format(tb_folder_path, ENV_NAME, run_number))
+            dqn.load_weights('{}\DQN_{}_run{}_weights.h5f'.format(run_path, ENV_NAME, run_number))
             print("Testing has started!")
             dqn.test(env, nb_episodes=1, visualize=False)
             print("Testing has started!")
             env.shut_down_bizhawk_game()
             exit()
 
-    os.mkdir(tb_folder_path)
+    os.mkdir(run_path)
 
-    with open(f"{tb_folder_path}/run_summary.txt", "w") as f:
+    with open(f"{run_path}/run_summary.txt", "w") as f:
         model.summary(print_fn=lambda x: f.write(x + '\n'))
 
-    with open(f"{tb_folder_path}/config.json", "w") as outfile:
+    with open(f"{run_path}/config.json", "w") as outfile:
         json_string = model.to_json()
         json.dump(json_string, outfile)
 
     # This function saves all the important hypterparameters to the run summary file.
-    save_hyperparameters(["DQN.py", "gym_bizhawk.py"], f"{tb_folder_path}/run_summary.txt")
+    save_hyperparameters(["DQN.py", "gym_bizhawk.py"], f"{run_path}/run_summary.txt")
 
     start_time_ascii = time.asctime(time.localtime(time.time()))
     start_time = time.time()
     print("Training has started!")
+
     # BREADCRUMBS_START
-    # try:
-    dqn.fit(env, nb_steps=512 * 32, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
-    # except OSError:
-    #     print("OS ERROR OCCURED.")
-    #     print("If this is not a emulator switch.")
+    dqn.fit(env, nb_steps=512 * 2, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=False)])
     # BREADCRUMBS_END
 
     # After training is done, we save the final weights.
-    dqn.save_weights('{}\DQN_{}_run{}_weights.h5f'.format(tb_folder_path, ENV_NAME, folder_count), overwrite=True)
+    dqn.save_weights('{}\{}_run{}_weights.h5f'.format(run_path, ENV_NAME, folder_count), overwrite=True)
 
     total_run_time = round(time.time() - start_time, 2)
     print("Training is done.")
-    send_email(f"The training of {run_name} finalized!\nIt started at {start_time_ascii} and took {total_run_time/60} minutes .")
+
+    visualize_cumulative_reward(input_file=f"{run_path}/cumulative_reward.txt",
+                                ouput_destionation=f"{run_path}/cumulative_reward_{experiment_name}_R{folder_count}_plot.png",
+                                readme_dest=f"{TB_path}/README/cumulative_reward_{experiment_name}_R{folder_count}_plot.png",
+                                experiment_name=experiment_name, run_count=folder_count)
+
+    visualize_max_reward(input_file=f"{run_path}/max_reward.txt",
+                                ouput_destionation=f"{run_path}/max_reward_{experiment_name}_R{folder_count}_plot.png",
+                                readme_dest=f"{TB_path}/README/max_reward_{experiment_name}_R{folder_count}_plot.png",
+                                experiment_name=experiment_name, run_count=folder_count)
+
+    send_email(f"The training of {run_name} finalized!\nIt started at {start_time_ascii} and took {total_run_time/60} minutes .",
+                run_path=run_path, experiment_name=experiment_name, run_number=folder_count)
 
     env.shut_down_bizhawk_game()
     # Finally, evaluate our algorithm for 5 episodes.
