@@ -40,7 +40,7 @@ with open(f"{TB_path}/README/README.txt", "w") as readme:
 
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
-for k in range(10):
+for k in range(1):
     env = gym_bizhawk.BizHawk(logging_folder_path=TB_path)
     nb_actions = env.action_space.n
     # BREADCRUMBS_START

@@ -153,7 +153,7 @@ class BizHawk(gym.Env):
 		return ob, reward, episode_over, {}
 
 	def reset(self):
-		print("For episode {} the cumulative_reward was {} and the max reward was {}.".format(self.curr_episode, self.cumulative_reward, self.max_cumulative_reward))
+		print(f"For episode {self.curr_episode} the cumulative_reward was {self.cumulative_reward:4.2} and the max reward was {self.max_cumulative_reward:4.2}.")
 		self.curr_episode += 1
 		self.curr_step = 0
 		self.write_graphs()
@@ -330,6 +330,8 @@ class BizHawk(gym.Env):
 
 		def distance_traveled_between_frames():
 			distance = self.get_distance()
+			if distance > 10000:
+				distance = self.last_distance
 			delta = distance - self.last_distance
 			self.last_distance = distance
 			return delta
