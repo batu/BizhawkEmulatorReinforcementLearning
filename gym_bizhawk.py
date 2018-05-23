@@ -33,7 +33,7 @@ class BizHawk(gym.Env):
 	metadata = {'render.modes': ['human']}
 
 	# state_representation SS or RAM
-	def __init__(self, logging_folder_path, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=1, no_action=False, human_warm_up_episode=0, active_debug_text=True):
+	def __init__(self, logging_folder_path, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=4, no_action=False, human_warm_up_episode=0, active_debug_text=True, replay=False):
 		self.__version__ = "1.0.0"
 		print("BizHawk - Version {}".format(self.__version__))
 
@@ -50,6 +50,7 @@ class BizHawk(gym.Env):
 		self.data_paths = glob(data_dirs + '*')
 		self.no_action = no_action
 		self.active_debug_text = active_debug_text
+		self.replay = replay
 
 		self.logging_folder_path = logging_folder_path
 		self.run_name = ""
@@ -66,7 +67,7 @@ class BizHawk(gym.Env):
 		print("Done loading models.")
 
 		# BREADCRUMBS_START
-		self.EPISODE_LENGTH = 512
+		self.EPISODE_LENGTH = 1024
 		self.ACTION_LENGTH = 12
 		# BREADCRUMBS_END
 
@@ -89,7 +90,7 @@ class BizHawk(gym.Env):
 			0: "A",
 			1: "Right",
 			2: "Left",
-			3: "B",
+			3: "B"
 			# 3: "Down",
 			# 4: "B"
 		}
@@ -156,7 +157,8 @@ class BizHawk(gym.Env):
 		print(f"For episode {self.curr_episode} the cumulative_reward was {self.cumulative_reward:4.2f} and the max reward was {self.max_cumulative_reward:4.2f}.")
 		self.curr_episode += 1
 		self.curr_step = 0
-		self.write_graphs()
+		if not self.replay:
+			self.write_graphs()
 		self.cumulative_reward = 0
 		self.max_cumulative_reward = 0
 		# self.update_target_vector()
