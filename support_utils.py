@@ -8,6 +8,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from os.path import basename
 
+
 def visualize_graph_messed_up(input_file: str, ouput_destionation: str, readme_dest: str,  experiment_num: str, run: int) -> None:
     lines = []
     with open(input_file, "r") as input:
@@ -123,10 +124,6 @@ def send_email(msg_body: str, run_path: str, experiment_name: str, run_number: i
     server.quit()
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 4afbc1088b5614711857187fb1b9dd55d52b10d2
 def save_hyperparameters(filenames: list, path_to_file: str, breadcrumb="# BREADCRUMBS") -> None:
     """
     Saves the lines in between breadcrumbs in all the given filenames. This is used for saving hyperparameters for RL training.
