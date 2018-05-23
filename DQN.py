@@ -17,7 +17,7 @@ from rl.memory import SequentialMemory
 REPLAY = False
 run_number = 21
 
-experiment_name = "Test"
+experiment_name = "W4"
 
 TB_path = f"WorkhorseResults/TensorBoard/{experiment_name}/"
 
@@ -34,14 +34,15 @@ except:
 models_path = "Results/Models/"
 ENV_NAME = 'BizHawk-v1'
 
-changes = """Made the model 1 layer deeper."""
-reasoning = """The single layer, even after the model, seems too shallow. I want to fine tune a bit better, and specifically, I am curious if there are any differences between 1 layer and 2 layers."""
-hypothesis = """There will not be any significant changes between a single layer and double layer set up."""
+changes = """Reduce the gamma from .9 to .95. And made a long run. 2048 * 48"""
+reasoning = """I want to see if the system given enough time can learn to get past bullet bill."""
+hypothesis = """Technically it should be possible. Lets us see."""
 
 if len(hypothesis) + len(changes) + len(reasoning) < 140:
     print("NOT ENOUGH LOGGING INFO")
     exit()
 
+with open(f"{TB_path}/README/README.txt", "w") as readme:
     start_time_ascii = time.asctime(time.localtime(time.time()))
     algorithm = os.path.basename(__file__)[:-2]
     print(f"Experiment start time: {start_time_ascii}", file=readme)
@@ -53,7 +54,7 @@ if len(hypothesis) + len(changes) + len(reasoning) < 140:
 
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
-for k in range(2):
+for k in range(12):
     env = gym_bizhawk.BizHawk(logging_folder_path=TB_path)
     nb_actions = env.action_space.n
     # BREADCRUMBS_START
@@ -66,8 +67,8 @@ for k in range(2):
     # BREADCRUMBS_START
     model = Sequential()
     model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
-    model.add(Dense(2**k + 1, activation='relu'))
-    model.add(Dense(2**k, activation='relu'))
+    model.add(Dense(32, activation='relu'))
+    model.add(Dense(16, activation='relu'))
     model.add(Dense(nb_actions, activation='linear'))
     # BREADCRUMBS_END
     model.summary()
@@ -109,7 +110,7 @@ for k in range(2):
             json_string = json.load(config)
             model = model_from_json(json_string)
             dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-                   nb_steps_warmup=1024, gamma=.99, target_model_update=1,
+                   nb_steps_warmup=1024, gamma=.90, target_model_update=1,
                    train_interval=1, delta_clip=1.)
             dqn.compile(Adam(lr=1e-3), metrics=['mae'])
             dqn.load_weights('{}\DQN_{}_run{}_weights.h5f'.format(run_path, ENV_NAME, run_number))
@@ -136,7 +137,7 @@ for k in range(2):
     print("Training has started!")
 
     # BREADCRUMBS_START
-    dqn.fit(env, nb_steps=512 * 2, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=False)])
+    dqn.fit(env, nb_steps=2048 * 64, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=False)])
     # BREADCRUMBS_END
 
     # After training is done, we save the final weights.

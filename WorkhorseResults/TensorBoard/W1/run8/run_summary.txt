@@ -1,14 +1,16 @@
 _________________________________________________________________
 Layer (type)                 Output Shape              Param #   
 =================================================================
-flatten_8 (Flatten)          (None, 256)               0         
+flatten_7 (Flatten)          (None, 1024)              0         
 _________________________________________________________________
-dense_15 (Dense)             (None, 128)               32896     
+dense_19 (Dense)             (None, 65)                66625     
 _________________________________________________________________
-dense_16 (Dense)             (None, 4)                 516       
+dense_20 (Dense)             (None, 64)                4224      
+_________________________________________________________________
+dense_21 (Dense)             (None, 4)                 260       
 =================================================================
-Total params: 33,412
-Trainable params: 33,412
+Total params: 71,109
+Trainable params: 71,109
 Non-trainable params: 0
 _________________________________________________________________
 
@@ -16,6 +18,7 @@ _________________________________________________________________
 
     model = Sequential()
     model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
+    model.add(Dense(2**k + 1, activation='relu'))
     model.add(Dense(2**k, activation='relu'))
     model.add(Dense(nb_actions, activation='linear'))
 
@@ -28,11 +31,7 @@ _________________________________________________________________
 
     dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 
-    # try:
-    dqn.fit(env, nb_steps=512 * 32, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=tb_folder_path, write_graph=False)])
-    # except OSError:
-    #     print("OS ERROR OCCURED.")
-    #     print("If this is not a emulator switch.")
+    dqn.fit(env, nb_steps=512 * 32, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=False)])
 
 		self.EPISODE_LENGTH = 512
 		self.ACTION_LENGTH = 12

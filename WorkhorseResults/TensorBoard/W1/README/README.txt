@@ -1,4 +1,4 @@
-Experiment start time: Wed May 16 21:23:57 2018
+Experiment start time: Thu May 17 11:09:01 2018
 
 Algorithm:
 DQN.
@@ -13,4 +13,4 @@ Hypothesis:
 There will not be any significant changes between a single layer and double layer set up.
 
 Results:
-
+Max reward average definitely increased compared to a single layer set up!
