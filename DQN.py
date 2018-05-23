@@ -18,7 +18,10 @@ REPLAY = True
 run_number = 2
 experiment_name = "V3_Level"
 
-TB_path = f"Results/TensorBoard/{experiment_name}/"
+experiment_name = "W4"
+
+TB_path = f"WorkhorseResults/TensorBoard/{experiment_name}/"
+
 try:
     os.mkdir(TB_path[:-1])
 except:
