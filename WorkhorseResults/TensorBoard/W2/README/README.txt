@@ -1,16 +1,16 @@
-Experiment start time: Wed May 16 15:34:48 2018
+Experiment start time: Thu May 17 14:56:44 2018
 
 Algorithm:
 DQN.
 
 The Changes:
-Reduced the gamme to .9 (from .99)
+Made the model have a funnel shape shape.
 
 Reasoning:
-We do not need long term planning, we just want the agent to be more reactive. Shorter horizon should give us that
+The double layer identical shape was, uh, a bug..
 
 Hypothesis:
-The training will make the agent more reactive stable.
+Even if there was a bug, the better shape should make a non negligable difference.
 
 Results:
-
+It did not. The signifant change between layer diffences. A small bottleneck doesnt seem to affect anything.

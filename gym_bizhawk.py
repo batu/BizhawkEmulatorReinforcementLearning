@@ -33,7 +33,7 @@ class BizHawk(gym.Env):
 	metadata = {'render.modes': ['human']}
 
 	# state_representation SS or RAM
-	def __init__(self, logging_folder_path, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=1, no_action=False, human_warm_up_episode=0, active_debug_text=True):
+	def __init__(self, logging_folder_path, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=4, no_action=False, human_warm_up_episode=0, active_debug_text=True):
 		self.__version__ = "1.0.0"
 		print("BizHawk - Version {}".format(self.__version__))
 
