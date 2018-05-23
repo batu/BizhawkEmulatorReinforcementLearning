@@ -123,8 +123,6 @@ def send_email(msg_body: str, run_path: str, experiment_name: str, run_number: i
     server.quit()
 
 
-send_email("test\n", "Results/TensorBoard/Test/run4", "Test", "4")
-
 
 def save_hyperparameters(filenames: list, path_to_file: str, breadcrumb="# BREADCRUMBS") -> None:
     """

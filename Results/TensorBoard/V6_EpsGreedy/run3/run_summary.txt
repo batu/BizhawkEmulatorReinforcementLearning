@@ -1,0 +1,70 @@
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+flatten_3 (Flatten)          (None, 1024)              0         
+_________________________________________________________________
+dense_7 (Dense)              (None, 32)                32800     
+_________________________________________________________________
+dense_8 (Dense)              (None, 16)                528       
+_________________________________________________________________
+dense_9 (Dense)              (None, 4)                 68        
+=================================================================
+Total params: 33,396
+Trainable params: 33,396
+Non-trainable params: 0
+_________________________________________________________________
+
+for k in range(2, 20):
+    window_length = 1
+
+    model = Sequential()
+    model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
+    model.add(Dense(2**(k + 1), activation='relu'))
+    model.add(Dense(2**k, activation='relu'))
+    model.add(Dense(nb_actions, activation='linear'))
+
+    memory = SequentialMemory(limit=2048, window_length=window_length)
+    # policy = BoltzmannQPolicy()
+    policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.05, value_test=.05,
+                              nb_steps=1024 * 32 * (k + 1))
+
+    dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
+           nb_steps_warmup=1024, gamma=.98, target_model_update=1e-3,
+           train_interval=1, delta_clip=1.)
+
+    dqn.compile(Adam(lr=1e-3), metrics=['mae'])
+
+    dqn.fit(env, nb_steps=1024 * 32 * (k + 1), visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=False)])
+
+		self.EPISODE_LENGTH = 1024
+		self.ACTION_LENGTH = 12
+
+		# This is the action space.
+		self.action_dict = {
+			0: "A",
+			1: "Right",
+			2: "Left",
+			3: "B"
+			# 3: "Down",
+			# 4: "B"
+		}
+
+		# This is the state
+		return current_vector_with_memory_from_ss()
+
+		def plusone_increase_minus_half_decrease_or_stationary():
+			distance = self.get_distance()
+			delta = distance - self.last_distance
+
+			reward = -.5
+			# The reward amounts
+			if delta > 0:
+				reward = 1
+			elif delta < 0:
+				reward = -.5
+
+			self.last_distance = distance
+			return reward
+
+		# The reward is:
+		reward = distance_traveled_between_frames()
