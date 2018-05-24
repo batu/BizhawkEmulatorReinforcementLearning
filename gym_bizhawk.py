@@ -33,7 +33,7 @@ class BizHawk(gym.Env):
 	metadata = {'render.modes': ['human']}
 
 	# state_representation SS or RAM
-	def __init__(self, logging_folder_path, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=4, no_action=False, human_warm_up_episode=0, active_debug_text=True):
+	def __init__(self, logging_folder_path, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=1, no_action=False, human_warm_up_episode=0, active_debug_text=True, replay=False):
 		self.__version__ = "1.0.0"
 		print("BizHawk - Version {}".format(self.__version__))
 
@@ -50,6 +50,7 @@ class BizHawk(gym.Env):
 		self.data_paths = glob(data_dirs + '*')
 		self.no_action = no_action
 		self.active_debug_text = active_debug_text
+		self.replay = replay
 
 		self.logging_folder_path = logging_folder_path
 		self.run_name = ""
@@ -106,8 +107,8 @@ class BizHawk(gym.Env):
 
 		elif self.state_representation == "SS":
 			unit_state_size = 256
-			for _ in range(20):
-				print("REMEMBER TO TURN ON UPDATE RESET IF YOU HAVE A TARGET VECTOR.")
+			# for _ in range(20):
+			# 	print("REMEMBER TO TURN ON UPDATE RESET IF YOU HAVE A TARGET VECTOR.")
 
 		for _ in range(self.memory_count):
 			self.memory_vectors.append(np.zeros(unit_state_size))
@@ -127,7 +128,6 @@ class BizHawk(gym.Env):
 		print("Load the game state.")
 		self.start_bizhawk_game()
 		# print("Load succesful!")
-		# self.start_recording_bizhawk()
 
 	def step(self, action):
 		"""
@@ -156,7 +156,8 @@ class BizHawk(gym.Env):
 		print(f"For episode {self.curr_episode} the cumulative_reward was {self.cumulative_reward:4.2f} and the max reward was {self.max_cumulative_reward:4.2f}.")
 		self.curr_episode += 1
 		self.curr_step = 0
-		self.write_graphs()
+		if not self.replay:
+			self.write_graphs()
 		self.cumulative_reward = 0
 		self.max_cumulative_reward = 0
 		# self.update_target_vector()
@@ -461,24 +462,44 @@ class BizHawk(gym.Env):
 				# print(out_line)
 
 	def start_recording_bizhawk(self):
-
-		for _ in range(30):
+		for _ in range(15):
 			self.proc.stdin.write(b'emu.frameadvance() ')
 			self.proc.stdin.flush()
 
 		pyautogui.moveTo(229, 180, duration=0.25)
 		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
 		pyautogui.moveTo(229, 190, duration=0.25)
 		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
 		pyautogui.moveTo(317, 396, duration=0.25)
 		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
 		pyautogui.moveTo(504, 450, duration=0.25)
 		pyautogui.click()
-		pyautogui.moveTo(504, 350, duration=0.25)
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
+		pyautogui.moveTo(430, 431, duration=0.25)
+		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
+		pyautogui.moveTo(417, 463, duration=0.25)
+		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
+		pyautogui.moveTo(601, 495, duration=0.25)
+		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
+		pyautogui.moveTo(1022, 606, duration=0.25)
 		pyautogui.click()
 		pyautogui.click()
 
-	def save_recording_bizhawk(self, dest: str):
+	def save_recording_bizhawk(self):
+		self.proc.stdin.write(b'emu.frameadvance() ')
 		self.proc.stdin.write(b'movie.save()')
 		self.proc.stdin.flush()
 
@@ -491,6 +512,7 @@ class BizHawk(gym.Env):
 			file.write(f"{self.curr_episode},{self.cumulative_reward:4.4f}\n")
 
 	def shut_down_bizhawk_game(self):
+		self.save_recording_bizhawk()
 		print("Exiting bizhawk.")
 		try:
 			for _ in range(1000):

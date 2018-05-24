@@ -2,10 +2,11 @@ import gym_bizhawk
 import os
 import time
 import json
+from shutil import copyfile
 from support_utils import save_hyperparameters, send_email, visualize_cumulative_reward, visualize_max_reward
 
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Flatten, Conv2D, MaxPooling2D, Reshape
+from keras.layers import Dense, Activation, Flatten, Conv2D, MaxPooling2D, Reshape, Input
 from keras.optimizers import Adam
 from keras import callbacks
 from keras.models import model_from_json
@@ -14,13 +15,11 @@ from rl.agents.dqn import DQNAgent
 from rl.policy import EpsGreedyQPolicy, BoltzmannQPolicy, LinearAnnealedPolicy
 from rl.memory import SequentialMemory
 
-REPLAY = True
-run_number = 2
-experiment_name = "V3_Level"
+REPLAY = False
+run_number = 1
+experiment_name = "V9_SizeChange"
 
-experiment_name = "W4"
-
-TB_path = f"WorkhorseResults/TensorBoard/{experiment_name}/"
+TB_path = f"Results/TensorBoard/{experiment_name}/"
 
 try:
     os.mkdir(TB_path[:-1])
@@ -35,9 +34,9 @@ except:
 models_path = "Results/Models/"
 ENV_NAME = 'BizHawk-v1'
 
-changes = """Changed polcy to EpsGrededy to reach 0."""
-reasoning = """It was never reaching 0. So it still had the problem we inistiallt had. Fixed it."""
-hypothesis = """I expect the floor of max distance to rise even further."""
+changes = """Changed Model to have A smaller size. Even smaller! From 13 thousand to like, less.........................................................................."""
+reasoning = """Adam suggested it... """
+hypothesis = """No specific expecations apart from increased performance."""
 
 if not REPLAY:
     if len(hypothesis) + len(changes) + len(reasoning) < 140:
@@ -58,19 +57,31 @@ if not REPLAY:
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
 # BREADCRUMBS_START
-window_length = 1
-# BREADCRUMBS_END
+window_length = 4
 env = gym_bizhawk.BizHawk(logging_folder_path=TB_path, replay=REPLAY)
+# BREADCRUMBS_END
 nb_actions = env.action_space.n
 
 # Sequential Model
 print(env.observation_space.shape)
 
+# model = Sequential()
+# model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
+# model.add(Dense(32, activation="relu"))
+# model.add(Dense(nb_actions, activation='linear'))
+# model.add(Dense(16, activation="relu"))
+# model.add(Dense(nb_actions, activation='linear'))
+
 # BREADCRUMBS_START
 model = Sequential()
-model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
+model.add(Dense(4, input_shape=((window_length,) + (env.observation_space.shape)), activation="relu"))
+model.add(Flatten())
+model.add(Dense(16, activation="relu"))
+model.add(Dense(4, activation="relu"))
+model.add(Dense(4, activation="relu"))
 model.add(Dense(nb_actions, activation='linear'))
 # BREADCRUMBS_END
+
 model.summary()
 
 # CONV Model
@@ -85,13 +96,15 @@ model.summary()
 # you can specify the dueling_type to one of {'avg','max','naive'}
 
 # BREADCRUMBS_START
+episode_count = 16
+step_count = env.EPISODE_LENGTH * episode_count
 memory = SequentialMemory(limit=2048, window_length=window_length)
 # policy = BoltzmannQPolicy()
-policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=0, value_test=0,
-                          nb_steps=1024 * 32)
+policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=.5, value_min=0.05, value_test=0,
+                          nb_steps=step_count)
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-       nb_steps_warmup=1024, gamma=.98, target_model_update=1e-3,
+       nb_steps_warmup=1024, gamma=.96, target_model_update=1e-3,
        train_interval=1, delta_clip=1.)
 
 dqn.compile(Adam(lr=1e-3), metrics=['mae'])
@@ -139,7 +152,7 @@ start_time = time.time()
 print("Training has started!")
 
 # BREADCRUMBS_START
-dqn.fit(env, nb_steps=1024 * 32, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=False)])
+dqn.fit(env, nb_steps=step_count, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=False)])
 # BREADCRUMBS_END
 
 # After training is done, we save the final weights.
@@ -147,6 +160,18 @@ dqn.save_weights('{}\{}_run{}_weights.h5f'.format(run_path, ENV_NAME, folder_cou
 
 total_run_time = round(time.time() - start_time, 2)
 print("Training is done.")
+
+# Finally, evaluate our algorithm for 5 episodes.
+# movie.save("C:/Users/user/Desktop/VideoGame Ret/RL Retrieval/movie")
+# dqn.test(env, nb_episodes=1, visualize=False)
+
+print("Testing has started!")
+env.start_recording_bizhawk()
+dqn.test(env, nb_episodes=1, visualize=False)
+
+print("Testing is done!")
+env.shut_down_bizhawk_game()
+
 
 visualize_cumulative_reward(input_file=f"{run_path}/cumulative_reward.txt",
                             ouput_destionation=f"{run_path}/cumulative_reward_{experiment_name}_R{folder_count}_plot.png",
@@ -161,9 +186,9 @@ visualize_max_reward(input_file=f"{run_path}/max_reward.txt",
 send_email(f"The training of {run_name} finalized!\nIt started at {start_time_ascii} and took {total_run_time/60} minutes .",
             run_path=run_path, experiment_name=experiment_name, run_number=folder_count)
 
-env.shut_down_bizhawk_game()
-# Finally, evaluate our algorithm for 5 episodes.
-# movie.save("C:/Users/user/Desktop/VideoGame Ret/RL Retrieval/movie")
-# dqn.test(env, nb_episodes=1, visualize=False)
+
+copyfile("C:/Users/user/Desktop/VideoGame Ret/RL Retrieval/BizHawk/Movies/Super Mario World (USA).bk2",
+        f"{run_path}/{experiment_name}_R{folder_count}.bk2")
+print("Recording is saved!")
 
 time.sleep(5)

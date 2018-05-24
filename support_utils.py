@@ -1,5 +1,6 @@
 import smtplib
-import sys
+import numpy as np
+import pyautogui
 import time
 import re
 import matplotlib.pyplot as plt
@@ -7,6 +8,27 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from os.path import basename
+
+
+def moveMouse():
+    pyautogui.moveTo(229, 180, duration=0.25)
+    pyautogui.click()
+    pyautogui.moveTo(229, 190, duration=0.25)
+    pyautogui.click()
+    pyautogui.moveTo(317, 396, duration=0.25)
+    pyautogui.click()
+    pyautogui.moveTo(504, 450, duration=0.25)
+    pyautogui.click()
+    pyautogui.moveTo(430, 431, duration=0.25)
+    pyautogui.click()
+    pyautogui.moveTo(417, 463, duration=0.25)
+    pyautogui.click()
+    pyautogui.moveTo(601, 495, duration=0.25)
+    pyautogui.click()
+    pyautogui.moveTo(1022, 606, duration=0.25)
+    pyautogui.click()
+    pyautogui.click()
+
 
 
 def visualize_graph_messed_up(input_file: str, ouput_destionation: str, readme_dest: str,  experiment_num: str, run: int) -> None:
@@ -47,9 +69,18 @@ def visualize_graph_messed_up(input_file: str, ouput_destionation: str, readme_d
     # plt.show()
 
 
+def runningMean(x, N):
+    y = np.zeros((len(x),))
+    for ctr in range(len(x)):
+        y[ctr] = np.sum(x[ctr:(ctr + N)])
+    return y / N
+
+
 def visualize_cumulative_reward(input_file: str, ouput_destionation: str, readme_dest: str, experiment_name: str, run_count: int) -> None:
     indexes = []
     values = []
+    N = 4
+
     with open(input_file, "r") as input:
         for line in input:
             indexes.append(int(line.split(",")[0]))
@@ -58,9 +89,12 @@ def visualize_cumulative_reward(input_file: str, ouput_destionation: str, readme
                 value = values[-1]
             values.append(value)
 
+    running_average = runningMean(values, N)
+
     fig = plt.figure()
     plt.title(f"Cumulative Reward for Run {run_count} of {experiment_name}")
     plt.plot(indexes, values, color="teal", linewidth=1.5, linestyle="-", label="Cumulative Reward")
+    plt.plot(indexes, running_average, color="gray", linewidth=1, linestyle=":", label="Running Average of 4")
     plt.legend(loc='upper left', frameon=False)
     ax = fig.add_subplot(111)
     ax.set_xlabel('Episode')
@@ -73,6 +107,8 @@ def visualize_cumulative_reward(input_file: str, ouput_destionation: str, readme
 def visualize_max_reward(input_file: str, ouput_destionation: str, readme_dest: str, experiment_name: str, run_count: int) -> None:
     indexes = []
     values = []
+    N = 4
+
     with open(input_file, "r") as input:
         for line in input:
             indexes.append(int(line.split(",")[0]))
@@ -81,9 +117,12 @@ def visualize_max_reward(input_file: str, ouput_destionation: str, readme_dest: 
                 value = values[-1]
             values.append(value)
 
+    running_average = runningMean(values, N)
+
     fig = plt.figure()
     plt.title(f"Max Reward for Run {run_count} of {experiment_name}")
     plt.plot(indexes, values, color="orange", linewidth=1.5, linestyle="-", label="Max Reward")
+    plt.plot(indexes, running_average, color="gray", linewidth=1, linestyle=":", label="Running Average of 4")
     plt.legend(loc='upper left', frameon=False)
     ax = fig.add_subplot(111)
     ax.set_xlabel('Episode')
