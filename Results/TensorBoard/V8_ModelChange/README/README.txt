@@ -1,13 +1,13 @@
-Experiment start time: Wed May 23 16:39:58 2018
+Experiment start time: Thu May 24 10:00:48 2018
 
 Algorithm:
 DQN.
 
 The Changes:
-Changed Model to have different structure that condenses information from each frame. Chaned epmax to .5
+Changed Model to have a specific a frame understanding layer that is is not time sensitive. After that there is another layer that reasons over the temporailty.
 
 Reasoning:
-Adam suggested it, and the fact that we have seperated the temporal aspect of the frames from the learning frames themselves makes a lot of sense. This also controls the param size b removing the 1024 direct step
+I had a hunch towards combining that.
 
 Hypothesis:
 No specific expecations apart from increased performance.

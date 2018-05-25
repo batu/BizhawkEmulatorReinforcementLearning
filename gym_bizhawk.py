@@ -148,7 +148,7 @@ class BizHawk(gym.Env):
 		episode_over = self.curr_step >= self.EPISODE_LENGTH
 		action_code = self.action_dict[action]
 		if self.active_debug_text:
-			sys.stdout.write(f"Reward: {reward:4.2f}   Action Taken: {action_code}           \r")
+			sys.stdout.write(f"Reward: {reward:4.2f}   Action Taken: {action_code} in step {self.curr_step}           \r")
 			sys.stdout.flush()
 		return ob, reward, episode_over, {}
 
@@ -332,15 +332,26 @@ class BizHawk(gym.Env):
 		def distance_traveled_between_frames():
 			distance = self.get_distance()
 			delta = distance - self.last_distance
-			if delta > 10000:
+			if delta > 10:
 				delta = 0
-				exit()
 			self.last_distance = distance
 			return delta
 
+		def distance_traveled_between_frames_minus_for_nochange():
+			distance = self.get_distance()
+			delta = distance - self.last_distance
+
+			self.last_distance = distance
+			if delta == 0:
+				delta = -0.1
+			if delta > 10:
+				delta = 0
+			return delta
+
 		# BREADCRUMBS_START
+		# - for not moving is -0.1
 		# The reward is:
-		reward = distance_traveled_between_frames()
+		reward = distance_traveled_between_frames_minus_for_nochange()
 		# BREADCRUMBS_END
 		self.cumulative_reward += reward
 		if self.cumulative_reward > self.max_cumulative_reward:
