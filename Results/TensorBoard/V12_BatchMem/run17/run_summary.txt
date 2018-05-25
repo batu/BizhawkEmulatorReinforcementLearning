@@ -1,0 +1,80 @@
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+dense_81 (Dense)             (None, 4, 32)             8224      
+_________________________________________________________________
+flatten_17 (Flatten)         (None, 128)               0         
+_________________________________________________________________
+dense_82 (Dense)             (None, 32)                4128      
+_________________________________________________________________
+dense_83 (Dense)             (None, 16)                528       
+_________________________________________________________________
+dense_84 (Dense)             (None, 16)                272       
+_________________________________________________________________
+dense_85 (Dense)             (None, 4)                 68        
+=================================================================
+Total params: 13,220
+Trainable params: 13,220
+Non-trainable params: 0
+_________________________________________________________________
+
+for memory_size in [1024, 2048, 1024 * 4, 8192, 1024 * 32]:
+    for batch_size in [32, 128, 256, 512, 1024]:
+        window_length = 4
+        env = gym_bizhawk.BizHawk(logging_folder_path=TB_path, replay=REPLAY)
+
+        model = Sequential()
+        model.add(Dense(32, input_shape=((window_length,) + (env.observation_space.shape)), activation="relu"))
+        model.add(Flatten())
+        model.add(Dense(32, activation="relu"))
+        model.add(Dense(16, activation="relu"))
+        model.add(Dense(16, activation="relu"))
+        model.add(Dense(nb_actions, activation='linear'))
+
+        episode_count = 16
+        step_count = env.EPISODE_LENGTH * episode_count
+        memory = SequentialMemory(limit=memory_size, window_length=window_length)
+        policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=.75, value_min=0.0, value_test=0,
+                                     nb_steps=episode_count * 512 / 2)
+
+        dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
+               nb_steps_warmup=512, gamma=.975, target_model_update=1e-2,
+               train_interval=1, batch_size=batch_size, delta_clip=1.)
+
+        dqn.compile(Adam(lr=1e-3), metrics=['mae'])
+
+        dqn.fit(env, nb_steps=step_count, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=False)])
+
+		self.EPISODE_LENGTH = 512
+		self.ACTION_LENGTH = 12
+
+		# This is the action space.
+		self.action_dict = {
+			0: "A",
+			1: "Right",
+			2: "Left",
+			3: "B",
+			# 3: "Down",
+			# 4: "B"
+		}
+
+		# This is the state
+		return current_vector_with_memory_from_ss()
+
+		def plusone_increase_minus_half_decrease_or_stationary():
+			distance = self.get_distance()
+			delta = distance - self.last_distance
+
+			reward = -.5
+			# The reward amounts
+			if delta > 0:
+				reward = 1
+			elif delta < 0:
+				reward = -.5
+
+			self.last_distance = distance
+			return reward
+
+		# - for not moving is -0.1
+		# The reward is:
+		reward = distance_traveled_between_frames_minus_for_nochange()
