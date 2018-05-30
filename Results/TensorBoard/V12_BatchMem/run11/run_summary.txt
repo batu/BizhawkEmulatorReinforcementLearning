@@ -34,7 +34,7 @@ for memory_size in [1024, 2048, 1024 * 4, 8192, 1024 * 32]:
         episode_count = 16
         step_count = env.EPISODE_LENGTH * episode_count
         memory = SequentialMemory(limit=memory_size, window_length=window_length)
-        policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=.75, value_min=0.0, value_test=0,
+        policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=.9, value_min=0.0, value_test=0,
                                      nb_steps=episode_count * 512 / 2)
 
         dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,

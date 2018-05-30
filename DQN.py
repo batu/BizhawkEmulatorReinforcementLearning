@@ -16,8 +16,8 @@ from rl.policy import EpsGreedyQPolicy, BoltzmannQPolicy, LinearAnnealedPolicy, 
 from rl.memory import SequentialMemory
 
 REPLAY = False
-run_number = 1
-experiment_name = "V12_BatchMem"
+run_number = 5
+experiment_name = "V19_Depth"
 
 TB_path = f"Results/TensorBoard/{experiment_name}/"
 
@@ -34,9 +34,9 @@ except:
 models_path = "Results/Models/"
 ENV_NAME = 'BizHawk-v1'
 
-changes = """ Chaned the policyback to linear annealing and now testing out different batch and memory sizes."""
-reasoning = """This test run should give me an idea of what a good batch size is, and if the icnrease is helpful. Also memory size. """
-hypothesis = """ Mario shall not stop."""
+changes = """Changing the model depth"""
+reasoning = """ I just want to see how it goes.................................................................................. """
+hypothesis = """ """
 
 if not REPLAY:
     if len(hypothesis) + len(changes) + len(reasoning) < 140:
@@ -56,10 +56,12 @@ if not REPLAY:
 
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
-# BREADCRUMBS_START
-for memory_size in [1024, 2048, 1024 * 4, 8192, 1024 * 32]:
-    for batch_size in [32, 128, 256, 512, 1024]:
-        window_length = 4
+for dense_count in [1, 2, 3, 4, 5]:
+    for _ in range(5):
+        # BREADCRUMBS_START
+        window_length = 5
+        memory_size = 2048
+        batch_size = 256
         env = gym_bizhawk.BizHawk(logging_folder_path=TB_path, replay=REPLAY)
         # BREADCRUMBS_END
         nb_actions = env.action_space.n
@@ -76,11 +78,13 @@ for memory_size in [1024, 2048, 1024 * 4, 8192, 1024 * 32]:
 
         # BREADCRUMBS_START
         model = Sequential()
-        model.add(Dense(32, input_shape=((window_length,) + (env.observation_space.shape)), activation="relu"))
+        model.add(Dense(28, input_shape=((window_length,) + (257,)), activation="relu"))
         model.add(Flatten())
-        model.add(Dense(32, activation="relu"))
-        model.add(Dense(16, activation="relu"))
-        model.add(Dense(16, activation="relu"))
+        model.add(Dense(28, activation="relu"))
+        model.add(Dense(14, activation="relu"))
+        for x in range(dense_count):
+            model.add(Dense(14, activation="relu"))
+        model.add(Dense(14, activation="relu"))
         model.add(Dense(nb_actions, activation='linear'))
         # BREADCRUMBS_END
 
@@ -100,14 +104,14 @@ for memory_size in [1024, 2048, 1024 * 4, 8192, 1024 * 32]:
 
         # BREADCRUMBS_START
         episode_count = 16
-        step_count = env.EPISODE_LENGTH * episode_count
+        step_count = env.EPISODE_LENGTH * 1024
         memory = SequentialMemory(limit=memory_size, window_length=window_length)
-        policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=.75, value_min=0.0, value_test=0,
-                                     nb_steps=episode_count * 512 / 2)
+        policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=.75, value_min=0.075, value_test=0,
+                                     nb_steps=episode_count * 512 * 3 / 4)
 
         dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-               nb_steps_warmup=512, gamma=.975, target_model_update=1e-2,
-               train_interval=1, batch_size=batch_size, delta_clip=1.)
+               nb_steps_warmup=512, gamma=.98, target_model_update=1e-2,
+               train_interval=1, batch_size=batch_size, delta_clip=1., enable_dueling_network=True, dueling_type="avg")
 
         dqn.compile(Adam(lr=1e-3), metrics=['mae'])
         # BREADCRUMBS_END
@@ -132,9 +136,17 @@ for memory_size in [1024, 2048, 1024 * 4, 8192, 1024 * 32]:
                 dqn.compile(Adam(lr=1e-3), metrics=['mae'])
                 dqn.load_weights('{}\{}_run{}_weights.h5f'.format(run_path, ENV_NAME, run_number))
                 print("Testing has started!")
+                env.start_recording_bizhawk()
                 dqn.test(env, nb_episodes=1, visualize=False)
                 print("Testing has started!")
                 env.shut_down_bizhawk_game()
+                try:
+                    copyfile("C:/Users/user/Desktop/VideoGame Ret/RL Retrieval/BizHawk/Movies/Super Mario World (USA).bk2",
+                            f"{run_path}/{experiment_name}_R{folder_count}.bk2")
+                    os.remove("C:/Users/user/Desktop/VideoGame Ret/RL Retrieval/BizHawk/Movies/Super Mario World (USA).bk2")
+                    print("Recording is saved!")
+                except:
+                    print("The file isnt found. Recording hasnt been started!")
                 exit()
 
         os.mkdir(run_path)
