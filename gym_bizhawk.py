@@ -45,6 +45,7 @@ class BizHawk(gym.Env):
 		self.current_vector = []
 		self.last_distance = 0
 		self.last_state = []
+		self.last_action = 0
 
 		self.paths = []
 		self.data_paths = glob(data_dirs + '*')
@@ -67,7 +68,7 @@ class BizHawk(gym.Env):
 		print("Done loading models.")
 
 		# BREADCRUMBS_START
-		self.EPISODE_LENGTH = 512
+		self.EPISODE_LENGTH = 768
 		self.ACTION_LENGTH = 12
 		# BREADCRUMBS_END
 
@@ -141,6 +142,7 @@ class BizHawk(gym.Env):
 			self._take_action(4)
 		else:
 			self._take_action(action)
+			self.last_action = action
 		self.curr_step += 1
 		reward = self._get_reward()
 		self.cumulative_reward += reward
@@ -183,6 +185,13 @@ class BizHawk(gym.Env):
 			flat = np_vectors.reshape((256 * self.memory_count))
 			return flat
 
+		def current_vector_with_memory_from_ss_plus_last_action():
+			self.update_current_vector_bizhawk_screenshot()
+			np_vectors = np.array(self.memory_vectors)
+			flat = np_vectors.reshape((256 * self.memory_count))
+			combined_state = np.append(flat, self.last_action)
+			return combined_state
+
 		def current_vector_plus_target_from_ss():
 			if self.memory_count > 1:
 				combined_state = np.append(self.memory_vectors, self.target_vector)
@@ -200,9 +209,17 @@ class BizHawk(gym.Env):
 			# Possibly do some more data munging.
 			return self.get_pixel_data()
 
+		def current_vector_plus_target_from_ss_plus_last_action():
+			if self.memory_count > 1:
+				combined_state = np.append(self.memory_vectors, self.target_vector)
+				combined_state = np.append(combined_state, self.last_action)
+			else:
+				combined_state = np.append(self.current_vector, self.target_vector)
+				combined_state = np.append(combined_state, self.last_action)
+			return combined_state
 		# BREADCRUMBS_START
 		# This is the state
-		return current_vector_with_memory_from_ss()
+		return current_vector_with_memory_from_ss_plus_last_action()
 		# BREADCRUMBS_END
 
 	def get_ram_state(self, normalize=True):
@@ -337,6 +354,7 @@ class BizHawk(gym.Env):
 			self.last_distance = distance
 			return delta
 
+		# BREADCRUMBS_START
 		def distance_traveled_between_frames_minus_for_nochange():
 			distance = self.get_distance()
 			delta = distance - self.last_distance
@@ -344,11 +362,12 @@ class BizHawk(gym.Env):
 			self.last_distance = distance
 			if delta == 0:
 				delta = -0.1
-			if delta > 10:
+			if delta > 30:
+				delta = 0
+			if delta < -1250:
 				delta = 0
 			return delta
 
-		# BREADCRUMBS_START
 		# - for not moving is -0.1
 		# The reward is:
 		reward = distance_traveled_between_frames_minus_for_nochange()
