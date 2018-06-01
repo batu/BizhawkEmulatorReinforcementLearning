@@ -5,7 +5,10 @@ import numpy as np
 from scipy import spatial
 
 import pyautogui
+<<<<<<< HEAD
 from functools import reduce
+=======
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 
 from keras.models import load_model
 # from keras.applications.inception_v3 import InceptionV3
@@ -35,7 +38,11 @@ class BizHawk(gym.Env):
 
 	# state_representation SS or RAM
 	def __init__(self, logging_folder_path, algorithm_name="DQN", state_representation="SS", reward_representation="DISTANCE", state_frame_count=1, no_action=False, human_warm_up_episode=0, active_debug_text=True, replay=False):
+<<<<<<< HEAD
 		self.__version__ = "1.5.0"
+=======
+		self.__version__ = "1.0.0"
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 		print("BizHawk - Version {}".format(self.__version__))
 
 		state_frame_count = 1 if state_frame_count < 1 else state_frame_count
@@ -48,10 +55,13 @@ class BizHawk(gym.Env):
 		self.last_state = []
 		self.last_action = 0
 
+<<<<<<< HEAD
 		self.max_bounding_box = [-float("Inf")]
 		self.min_bounding_box = [float("Inf")]
 		self.last_bounding_box_size = 0
 
+=======
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 		self.paths = []
 		self.data_paths = glob(data_dirs + '*')
 		self.no_action = no_action
@@ -97,7 +107,10 @@ class BizHawk(gym.Env):
 			1: "Right",
 			2: "Left",
 			3: "B",
+<<<<<<< HEAD
 			# 4: ""
+=======
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 			# 3: "Down",
 			# 4: "B"
 		}
@@ -120,8 +133,13 @@ class BizHawk(gym.Env):
 		for _ in range(self.memory_count):
 			self.memory_vectors.append(np.zeros(unit_state_size))
 
+<<<<<<< HEAD
 		high = np.multiply(np.ones((unit_state_size + 1) * self.memory_count), 10)
 		low = np.multiply(np.ones((unit_state_size + 1) * self.memory_count), -10)
+=======
+		high = np.ones(unit_state_size * self.memory_count)
+		low = np.zeros(unit_state_size * self.memory_count)
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 		self.observation_space = spaces.Box(low, high)
 
 		# Store what the agent tried
@@ -146,8 +164,11 @@ class BizHawk(gym.Env):
 		"""
 		if self.no_action:
 			self._take_action(4)
+<<<<<<< HEAD
 		if self.no_action == "Random":
 			pass
+=======
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 		else:
 			self._take_action(action)
 			self.last_action = action
@@ -198,10 +219,13 @@ class BizHawk(gym.Env):
 			np_vectors = np.array(self.memory_vectors)
 			flat = np_vectors.reshape((256 * self.memory_count))
 			combined_state = np.append(flat, self.last_action)
+<<<<<<< HEAD
 			with open(f"state_data_raw.txt", "a+") as file:
 				file.write(f"{(self.curr_episode - 1) * 512 + self.curr_step},{flat}\n")
 			with open(f"state_data.txt", "a+") as file:
 				file.write(f"{(self.curr_episode - 1) * 512 + self.curr_step},{max(flat)},{min(flat)},{sum(flat)/len(flat)}\n")
+=======
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 			return combined_state
 
 		def current_vector_plus_target_from_ss():
@@ -252,14 +276,22 @@ class BizHawk(gym.Env):
 
 	def get_pixel_data(self):
 		self.proc.stdin.flush()
+<<<<<<< HEAD
 		self.proc.stdin.write(b'client.screenshot("{}.png") '.format(self.curr_step))
+=======
+		self.proc.stdin.write(b'client.screenshot("temp_screenshot.png") ')
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 		self.proc.stdin.write(b'io.stdout:write("continue\\n") ')
 		self.proc.stdin.flush()
 
 		new_line = self.proc.stdout.readline()
 		while new_line != b'continue\n':
 			new_line = self.proc.stdout.readline()
+<<<<<<< HEAD
 		temp_img = np.expand_dims(resize(imread('{}.png'.format(self.curr_step)),
+=======
+		temp_img = np.expand_dims(resize(imread('temp_screenshot.png'),
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 												(224, 256),
 												mode='reflect'),
 												axis=0)
@@ -312,6 +344,7 @@ class BizHawk(gym.Env):
 
 		return distance
 
+<<<<<<< HEAD
 	def get_bounding_box_volume(self, vector):
 		return reduce(lambda x, y: x * y, vector)
 
@@ -329,6 +362,9 @@ class BizHawk(gym.Env):
 			self.last_bounding_box_size = self.get_bounding_box_perimeter(self.current_vector)
 			return max(0, delta)
 
+=======
+	def _get_reward(self):
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 		def plus_one_for_positivedelta():
 			cosine_similarity = 1 - spatial.distance.cosine(self.current_vector, self.target_vector)
 			if self.last_cos_similarity < cosine_similarity:
@@ -423,6 +459,7 @@ class BizHawk(gym.Env):
 			self.memory_vectors.pop()
 			self.memory_vectors.append(self.current_vector)
 
+<<<<<<< HEAD
 	# def update_current_vector_bizhawk_screenshot(self):
 	# 	self.proc.stdin.flush()
 	# 	self.proc.stdin.write('client.screenshot("{}.png") '.format(self.curr_step).encode())
@@ -441,6 +478,8 @@ class BizHawk(gym.Env):
 	# 		self.memory_vectors.pop()
 	# 		self.memory_vectors.append(self.current_vector)
 
+=======
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 	def update_target_vector(self):
 		def random_screenshot_embedding_vector(MovingTarget=False):
 			if not MovingTarget:
@@ -466,12 +505,16 @@ class BizHawk(gym.Env):
 
 		random_screenshot_embedding_vector()
 
+<<<<<<< HEAD
 	def update_bounding_box(self) -> None:
 		self.min_bounding_box = min(self.current_vector, self.min_bounding_box, key=self.get_bounding_box_perimeter)
 		self.max_bounding_box = max(self.current_vector, self.max_bounding_box, key=self.get_bounding_box_perimeter)
 		return
 
 	def read_byte_lua(self, num: int):
+=======
+	def read_byte_lua(self, num):
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 		code = b''
 		code += b'io.stdout:write(mainmemory.readbyte(' + str.encode(str(num)) + b')) '
 		code += b'io.stdout:write(" ") '
@@ -547,6 +590,7 @@ class BizHawk(gym.Env):
 			self.proc.stdin.write(b'emu.frameadvance() ')
 			self.proc.stdin.flush()
 
+<<<<<<< HEAD
 		pyautogui.moveTo(229, 180, duration=0.075)
 		pyautogui.click()
 		self.proc.stdin.write(b'emu.frameadvance() ')
@@ -576,6 +620,37 @@ class BizHawk(gym.Env):
 		self.proc.stdin.write(b'emu.frameadvance() ')
 		self.proc.stdin.flush()
 		pyautogui.moveTo(1022, 606, duration=0.075)
+=======
+		pyautogui.moveTo(229, 180, duration=0.25)
+		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
+		pyautogui.moveTo(229, 190, duration=0.25)
+		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
+		pyautogui.moveTo(317, 396, duration=0.25)
+		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
+		pyautogui.moveTo(504, 450, duration=0.25)
+		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
+		pyautogui.moveTo(430, 431, duration=0.25)
+		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
+		pyautogui.moveTo(417, 463, duration=0.25)
+		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
+		pyautogui.moveTo(601, 495, duration=0.25)
+		pyautogui.click()
+		self.proc.stdin.write(b'emu.frameadvance() ')
+		self.proc.stdin.flush()
+		pyautogui.moveTo(1022, 606, duration=0.25)
+>>>>>>> c2740a99d466897df108219a654f9dec95003e70
 		pyautogui.click()
 		pyautogui.click()
 
