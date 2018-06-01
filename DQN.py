@@ -17,11 +17,7 @@ from rl.memory import SequentialMemory
 
 REPLAY = False
 run_number = 5
-<<<<<<< HEAD
-experiment_name = "V22_FixedGYMStateSizeGamma"
-=======
-experiment_name = "V19_Depth"
->>>>>>> c2740a99d466897df108219a654f9dec95003e70
+experiment_name = "V24_IntrinsicExploration"
 
 TB_path = f"Results/TensorBoard/{experiment_name}/"
 
@@ -38,15 +34,10 @@ except:
 models_path = "Results/Models/"
 ENV_NAME = 'BizHawk-v1'
 
-<<<<<<< HEAD
-changes = """Week three. To start off I fixed the gym state size. It was not between 0 and 1. I do not knw what discere(min,max) does but if it is clipping it might be huge! Also changed the gamma to only think about 12 actions into the future, 2.5 seconds"""
-reasoning = """ Lets see if this changes anything"""
-hypothesis = """DQN will show signs of life."""
-=======
-changes = """Changing the model depth"""
-reasoning = """ I just want to see how it goes.................................................................................. """
-hypothesis = """ """
->>>>>>> c2740a99d466897df108219a654f9dec95003e70
+changes = """Switching to intrinsic motivation. Currently what it is trying to is to increase the bounding box. Not the max just the box."""
+reasoning = """ Final attemps to get something for the paper."""
+hypothesis = """It will not work."""
+
 
 if not REPLAY:
     if len(hypothesis) + len(changes) + len(reasoning) < 140:
@@ -66,15 +57,9 @@ if not REPLAY:
 
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
-<<<<<<< HEAD
 # BREADCRUMBS_START
 for __ in range(1):
     for increase_confidence in range(5):
-=======
-for dense_count in [1, 2, 3, 4, 5]:
-    for _ in range(5):
-        # BREADCRUMBS_START
->>>>>>> c2740a99d466897df108219a654f9dec95003e70
         window_length = 5
         memory_size = 2048
         batch_size = 256
@@ -92,23 +77,16 @@ for dense_count in [1, 2, 3, 4, 5]:
         # model.add(Dense(16, activation="relu"))
         # model.add(Dense(nb_actions, activation='linear'))
 
+        # model.add(Dense(64, input_shape=((window_length,) + (257,)), activation="relu", trainable=False), )
+        # model.add(Dense(32, activation="relu"))
+
         # BREADCRUMBS_START
         model = Sequential()
-<<<<<<< HEAD
-        model.add(Dense(14, input_shape=((window_length,) + (257,)), activation="relu"))
+        model.add(Dense(32, input_shape=((window_length,) + (257,)), activation="relu"))
         model.add(Flatten())
+        model.add(Dense(32, activation="relu"))
         model.add(Dense(14, activation="relu"))
-        model.add(Dense(7, activation="relu"))
-        model.add(Dense(7, activation="relu"))
-=======
-        model.add(Dense(28, input_shape=((window_length,) + (257,)), activation="relu"))
-        model.add(Flatten())
-        model.add(Dense(28, activation="relu"))
         model.add(Dense(14, activation="relu"))
-        for x in range(dense_count):
-            model.add(Dense(14, activation="relu"))
-        model.add(Dense(14, activation="relu"))
->>>>>>> c2740a99d466897df108219a654f9dec95003e70
         model.add(Dense(nb_actions, activation='linear'))
         # BREADCRUMBS_END
 
@@ -128,7 +106,6 @@ for dense_count in [1, 2, 3, 4, 5]:
 
         # BREADCRUMBS_START
         episode_count = 16
-<<<<<<< HEAD
         step_count = env.EPISODE_LENGTH * episode_count
         memory = SequentialMemory(limit=memory_size, window_length=window_length)
         policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=.75, value_min=0.075, value_test=0,
@@ -136,15 +113,6 @@ for dense_count in [1, 2, 3, 4, 5]:
 
         dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
                nb_steps_warmup=512, gamma=.925, target_model_update=1e-2,
-=======
-        step_count = env.EPISODE_LENGTH * 1024
-        memory = SequentialMemory(limit=memory_size, window_length=window_length)
-        policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=.75, value_min=0.075, value_test=0,
-                                     nb_steps=episode_count * 512 * 3 / 4)
-
-        dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-               nb_steps_warmup=512, gamma=.98, target_model_update=1e-2,
->>>>>>> c2740a99d466897df108219a654f9dec95003e70
                train_interval=1, batch_size=batch_size, delta_clip=1., enable_dueling_network=True, dueling_type="avg")
 
         dqn.compile(Adam(lr=1e-3), metrics=['mae'])
@@ -200,11 +168,8 @@ for dense_count in [1, 2, 3, 4, 5]:
         print("Training has started!")
 
         # BREADCRUMBS_START
-<<<<<<< HEAD
         dqn.fit(env, nb_steps=step_count, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=True, write_images=True)])
-=======
-        dqn.fit(env, nb_steps=step_count, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=False)])
->>>>>>> c2740a99d466897df108219a654f9dec95003e70
+
         # BREADCRUMBS_END
 
         # After training is done, we save the final weights.
