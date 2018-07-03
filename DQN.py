@@ -1,12 +1,27 @@
 import gym_bizhawk
 import os
+import gym
 import time
 import json
+
+import cv2
+import matplotlib as plt
+import numpy as np
 from shutil import copyfile
 from support_utils import save_hyperparameters, send_email, visualize_cumulative_reward, visualize_max_reward
 
+import tensorflow as tf_out
+import keras
+from keras import backend as K
+
+from keras.models import Model
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Flatten, Conv2D, MaxPooling2D, Reshape, Input
+from keras.layers import Dense, Activation, Flatten, Conv2D, MaxPooling2D, Reshape, Input, GlobalAveragePooling2D, Lambda
+from keras.applications.inception_v3 import InceptionV3
+from keras.applications.mobilenet import MobileNet
+from keras.utils.generic_utils import CustomObjectScope
+
+
 from keras.optimizers import Adam
 from keras import callbacks
 from keras.models import model_from_json
@@ -16,8 +31,8 @@ from rl.policy import EpsGreedyQPolicy, BoltzmannQPolicy, LinearAnnealedPolicy, 
 from rl.memory import SequentialMemory
 
 REPLAY = False
-run_number = 5
-experiment_name = "V24_IntrinsicExploration"
+run_number = 0
+experiment_name = "Qbert_V2_mobilenetworking"
 
 TB_path = f"Results/TensorBoard/{experiment_name}/"
 
@@ -32,11 +47,11 @@ except:
     pass
 
 models_path = "Results/Models/"
-ENV_NAME = 'BizHawk-v1'
+ENV_NAME = 'Qbert-v0'
 
-changes = """Switching to intrinsic motivation. Currently what it is trying to is to increase the bounding box. Not the max just the box."""
-reasoning = """ Final attemps to get something for the paper."""
-hypothesis = """It will not work."""
+changes = """ Switched to the mobilenet to increase the speed. """
+reasoning = """ The 24fps is reasonably close to the human play experience."""
+hypothesis = """ The mobilenet with 3m params should make it at least function."""
 
 
 if not REPLAY:
@@ -58,62 +73,67 @@ if not REPLAY:
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
 # BREADCRUMBS_START
-for __ in range(1):
-    for increase_confidence in range(5):
+
+def lambda_resize(input_tensor):
+    import tensorflow as tf_out
+    return tf_out.image.resize_images(input_tensor, (128, 128))
+
+def relu6(x):
+  return K.relu(x, max_value=6)
+
+with CustomObjectScope({'relu6': relu6}):
         window_length = 5
         memory_size = 2048
-        batch_size = 256
-        env = gym_bizhawk.BizHawk(logging_folder_path=TB_path, replay=REPLAY)
+        batch_size = 1
+        env = gym.make(ENV_NAME)
+
         # BREADCRUMBS_END
         nb_actions = env.action_space.n
 
         # Sequential Model
         print(env.observation_space.shape)
 
-        # model = Sequential()
-        # model.add(Flatten(input_shape=(window_length,) + env.observation_space.shape))
-        # model.add(Dense(32, activation="relu"))
-        # model.add(Dense(nb_actions, activation='linear'))
-        # model.add(Dense(16, activation="relu"))
-        # model.add(Dense(nb_actions, activation='linear'))
-
-        # model.add(Dense(64, input_shape=((window_length,) + (257,)), activation="relu", trainable=False), )
-        # model.add(Dense(32, activation="relu"))
-
         # BREADCRUMBS_START
-        model = Sequential()
-        model.add(Dense(32, input_shape=((window_length,) + (257,)), activation="relu"))
-        model.add(Flatten())
-        model.add(Dense(32, activation="relu"))
-        model.add(Dense(14, activation="relu"))
-        model.add(Dense(14, activation="relu"))
-        model.add(Dense(nb_actions, activation='linear'))
+        input_tensor = Input((5, 210, 160, 3,))
+        input_tensor = Lambda(lambda frame: frame[0,0:1], output_shape=(210, 160, 3))(input_tensor)
+        input_tensor = Lambda(lambda_resize)(input_tensor)
+
+        mobilenet_model = MobileNet(weights='imagenet', include_top=False, input_shape=(128, 128, 3), input_tensor=input_tensor )
+
+        for layer in mobilenet_model.layers:
+            layer.trainable = False
+
+        # add a global spatial average pooling layer
+        x = mobilenet_model.output
+        x = Flatten()(x)
+        x = Dense(32, activation='relu',  trainable=False)(x)
+        x = Dense(16, activation='relu',  trainable=True)(x)
+        x = Dense(8, activation='relu',  trainable=True)(x)
+
+        predictions = Dense(nb_actions, activation='linear',  trainable=True)(x)
+
+        # this is the model we will train
+        model = Model(inputs=mobilenet_model.input, outputs=predictions)
+
         # BREADCRUMBS_END
+        #
+        # model = Sequential()
+        # model.add(Flatten(input_shape=(5, 210, 160, 3)))
+        # model.add(Dense(nb_actions, activation='linear', trainable=False))
 
         model.summary()
 
-        # CONV Model
-        # print(env.observation_space.shape)
-        # model = Sequential()
-        # model.add(Reshape((224, 256, 3), input_shape=(1, 1, 224, 256, 3)))
-        # print(model.summary())
-        # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
-        # even the metrics!
-
-        # enable the dueling network
-        # you can specify the dueling_type to one of {'avg','max','naive'}
-        # policy = BoltzmannGumbelQPolicy()
 
         # BREADCRUMBS_START
-        episode_count = 16
-        step_count = env.EPISODE_LENGTH * episode_count
+        episode_count = 8
+        step_count = 21600 # 24 frames per second time 15 minutes
         memory = SequentialMemory(limit=memory_size, window_length=window_length)
         policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=.75, value_min=0.075, value_test=0,
                                      nb_steps=episode_count * 512 / 2)
 
         dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-               nb_steps_warmup=512, gamma=.925, target_model_update=1e-2,
-               train_interval=1, batch_size=batch_size, delta_clip=1., enable_dueling_network=True, dueling_type="avg")
+               nb_steps_warmup=256, gamma=.925, target_model_update=1e-2,
+               train_interval=4, batch_size=batch_size, delta_clip=1., enable_dueling_network=True, dueling_type="avg")
 
         dqn.compile(Adam(lr=1e-3), metrics=['mae'])
         # BREADCRUMBS_END
@@ -125,31 +145,6 @@ for __ in range(1):
         run_name = f"run{folder_count}"
         run_path = f'{TB_path}{run_name}'
         env.run_name = run_name
-
-        if REPLAY:
-            run_name = f"run{run_number}"
-            run_path = f'{TB_path}{run_name}'
-            with open(f"{run_path}/config.json", "r") as config:
-                json_string = json.load(config)
-                model = model_from_json(json_string)
-                dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-                       nb_steps_warmup=1024, gamma=.99, target_model_update=1,
-                       train_interval=1, delta_clip=1.)
-                dqn.compile(Adam(lr=1e-3), metrics=['mae'])
-                dqn.load_weights('{}\{}_run{}_weights.h5f'.format(run_path, ENV_NAME, run_number))
-                print("Testing has started!")
-                env.start_recording_bizhawk()
-                dqn.test(env, nb_episodes=1, visualize=False)
-                print("Testing has started!")
-                env.shut_down_bizhawk_game()
-                try:
-                    copyfile("C:/Users/user/Desktop/VideoGame Ret/RL Retrieval/BizHawk/Movies/Super Mario World (USA).bk2",
-                            f"{run_path}/{experiment_name}_R{folder_count}.bk2")
-                    os.remove("C:/Users/user/Desktop/VideoGame Ret/RL Retrieval/BizHawk/Movies/Super Mario World (USA).bk2")
-                    print("Recording is saved!")
-                except:
-                    print("The file isnt found. Recording hasnt been started!")
-                exit()
 
         os.mkdir(run_path)
 
@@ -168,7 +163,7 @@ for __ in range(1):
         print("Training has started!")
 
         # BREADCRUMBS_START
-        dqn.fit(env, nb_steps=step_count, visualize=True, verbose=0, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=True, write_images=True)])
+        dqn.fit(env, nb_steps=step_count, visualize=True, verbose=2, callbacks=[callbacks.TensorBoard(log_dir=run_path, write_graph=True, write_images=True)])
 
         # BREADCRUMBS_END
 
@@ -177,37 +172,3 @@ for __ in range(1):
 
         total_run_time = round(time.time() - start_time, 2)
         print("Training is done.")
-
-        # Finally, evaluate our algorithm for 5 episodes.
-        # movie.save("C:/Users/user/Desktop/VideoGame Ret/RL Retrieval/movie")
-        # dqn.test(env, nb_episodes=1, visualize=False)
-
-        print("Testing has started!")
-        env.start_recording_bizhawk()
-        dqn.test(env, nb_episodes=1, visualize=False)
-
-        print("Testing is done!")
-        env.shut_down_bizhawk_game()
-
-        visualize_cumulative_reward(input_file=f"{run_path}/cumulative_reward.txt",
-                                    ouput_destionation=f"{run_path}/cumulative_reward_{experiment_name}_R{folder_count}_plot.png",
-                                    readme_dest=f"{TB_path}/README/cumulative_reward_{experiment_name}_R{folder_count}_plot.png",
-                                    experiment_name=experiment_name, run_count=folder_count)
-
-        visualize_max_reward(input_file=f"{run_path}/max_reward.txt",
-                                    ouput_destionation=f"{run_path}/max_reward_{experiment_name}_R{folder_count}_plot.png",
-                                    readme_dest=f"{TB_path}/README/max_reward_{experiment_name}_R{folder_count}_plot.png",
-                                    experiment_name=experiment_name, run_count=folder_count)
-
-        send_email(f"The training of {run_name} finalized!\nIt started at {start_time_ascii} and took {total_run_time/60} minutes .",
-                    run_path=run_path, experiment_name=experiment_name, run_number=folder_count)
-
-        try:
-            copyfile("C:/Users/user/Desktop/VideoGame Ret/RL Retrieval/BizHawk/Movies/Super Mario World (USA).bk2",
-                    f"{run_path}/{experiment_name}_R{folder_count}.bk2")
-            os.remove("C:/Users/user/Desktop/VideoGame Ret/RL Retrieval/BizHawk/Movies/Super Mario World (USA).bk2")
-            print("Recording is saved!")
-        except:
-            print("The file isnt found. Recording hasnt been started!")
-
-        time.sleep(5)

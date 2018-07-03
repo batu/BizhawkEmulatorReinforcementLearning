@@ -1,0 +1,33 @@
+[2213:2239:0630/041832.572555:ERROR:in_progress_cache_impl.cc(93)] Could not read download entries from file because there was a read failure.
+[2213:2213:0630/041836.898632:ERROR:background_mode_manager_aura.cc(13)] Not implemented reached in virtual void BackgroundModeManager::EnableLaunchOnStartup(bool)
+[1,2424842048:11:18:37.769361] Native Client module will be loaded at base address 0x0000488700000000
+[2213:2911:0630/041837.944256:ERROR:device_id_linux.cc(87)] Could not find appropriate disk uuid.
+[2213:2911:0630/041837.944287:ERROR:device_id_linux.cc(90)]   DeviceID=nvme0n1p1, uuid=D81CB2981CB2715C
+[2213:2911:0630/041837.944292:ERROR:device_id_linux.cc(90)]   DeviceID=nvme0n1p2, uuid=E777-4F7B
+[2213:2911:0630/041837.944296:ERROR:device_id_linux.cc(90)]   DeviceID=nvme0n1p3, uuid=e5174138-bb1f-436e-a811-4fe7bbd48832
+[2213:2911:0630/041837.944300:ERROR:device_id_linux.cc(90)]   DeviceID=nvme0n1p4, uuid=15bf9b58-ca0e-4fc6-a55a-e36589787d84
+[2213:2911:0630/041837.944306:ERROR:device_id_linux.cc(90)]   DeviceID=nvme1n1p1, uuid=768CC79F8CC7586F
+[2213:2911:0630/041837.944310:ERROR:device_id_linux.cc(90)]   DeviceID=nvme1n1p2, uuid=ACC7-C3B6
+[2213:2911:0630/041837.944314:ERROR:device_id_linux.cc(90)]   DeviceID=nvme1n1p4, uuid=84D0CA9ED0CA95B8
+[2213:2213:0630/041848.108588:ERROR:CONSOLE(143)] "Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.reddit.com') does not match the recipient window's origin ('https://www.google.kz').", source: chrome-search://most-visited/single.js (143)
+[2213:2213:0630/041855.147382:ERROR:media_internals.cc(103)] Cannot get RenderProcessHost
+[2268:2268:0630/044523.955585:ERROR:buffer_manager.cc(452)] [.DisplayCompositor-0x20205908d700]GL ERROR :GL_INVALID_OPERATION : glBufferData: <- error from previous GL command
+[2268:2268:0630/050940.954834:ERROR:gles2_cmd_decoder.cc(18288)] [.DisplayCompositor-0x20205c60c800]GL ERROR :GL_INVALID_OPERATION : glCreateAndConsumeTextureCHROMIUM: invalid mailbox name
+[2268:2268:0630/050940.954879:ERROR:gles2_cmd_decoder.cc(10129)] [.DisplayCompositor-0x20205c60c800]RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture filtering.
+[2268:2268:0630/050940.954901:ERROR:gles2_cmd_decoder.cc(18288)] [.DisplayCompositor-0x20205c60c800]GL ERROR :GL_INVALID_OPERATION : glCreateAndConsumeTextureCHROMIUM: invalid mailbox name
+[2268:2268:0630/050940.954931:ERROR:gles2_cmd_decoder.cc(10129)] [.DisplayCompositor-0x20205c60c800]RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture filtering.
+[2268:2268:0630/050940.954957:ERROR:gles2_cmd_decoder.cc(18288)] [.DisplayCompositor-0x20205c60c800]GL ERROR :GL_INVALID_OPERATION : glCreateAndConsumeTextureCHROMIUM: invalid mailbox name
+[2268:2268:0630/050940.954975:ERROR:gles2_cmd_decoder.cc(10129)] [.DisplayCompositor-0x20205c60c800]RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture filtering.
+[2268:2268:0630/050940.955040:ERROR:gles2_cmd_decoder.cc(18288)] [.DisplayCompositor-0x20205c60c800]GL ERROR :GL_INVALID_OPERATION : glCreateAndConsumeTextureCHROMIUM: invalid mailbox name
+[2268:2268:0630/050940.955055:ERROR:gles2_cmd_decoder.cc(10129)] [.DisplayCompositor-0x20205c60c800]RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture filtering.
+[2268:2268:0630/050940.955072:ERROR:gles2_cmd_decoder.cc(18288)] [.DisplayCompositor-0x20205c60c800]GL ERROR :GL_INVALID_OPERATION : glCreateAndConsumeTextureCHROMIUM: invalid mailbox name
+[2268:2268:0630/050940.955084:ERROR:gles2_cmd_decoder.cc(10129)] [.DisplayCompositor-0x20205c60c800]RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture filtering.
+[2268:2268:0630/050940.955097:ERROR:gles2_cmd_decoder.cc(18288)] [.DisplayCompositor-0x20205c60c800]GL ERROR :GL_INVALID_OPERATION : glCreateAndConsumeTextureCHROMIUM: invalid mailbox name
+[2268:2268:0630/050940.955108:ERROR:gles2_cmd_decoder.cc(10129)] [.DisplayCompositor-0x20205c60c800]RENDER WARNING: texture bound to texture unit 0 is not renderable. It maybe non-power-of-2 and have incompatible texture filtering.
+[2213:2213:0630/050955.360059:ERROR:media_internals.cc(103)] Cannot get RenderProcessHost
+[2213:2213:0630/050955.360235:ERROR:media_internals.cc(103)] Cannot get RenderProcessHost
+[2268:2268:0630/052915.746054:ERROR:buffer_manager.cc(452)] [.DisplayCompositor-0x202055f87100]GL ERROR :GL_INVALID_OPERATION : glBufferData: <- error from previous GL command
+[2213:2232:0630/071114.650387:ERROR:extension_protocols.cc(568)] Allowing load of chrome-extension://ekhagklcjbdpajgpjgmbionohlpdbjgc/browser-polyfill.js.mapfrom unknown origin. Could not find user data for request.
+[2213:2232:0630/071834.441494:ERROR:extension_protocols.cc(568)] Allowing load of chrome-extension://ekhagklcjbdpajgpjgmbionohlpdbjgc/browser-polyfill.js.mapfrom unknown origin. Could not find user data for request.
+[2213:2213:0630/082712.066065:ERROR:media_internals.cc(103)] Cannot get RenderProcessHost
+[2213:2213:0630/082712.066445:ERROR:media_internals.cc(103)] Cannot get RenderProcessHost

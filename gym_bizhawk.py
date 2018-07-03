@@ -49,8 +49,8 @@ class BizHawk(gym.Env):
 		self.last_state = []
 		self.last_action = 0
 
-		self.max_bounding_box = [-float("Inf")]
-		self.min_bounding_box = [float("Inf")]
+		self.max_bounding_box = [-10] * 256
+		self.min_bounding_box = [10] * 256
 		self.last_bounding_box_size = 0
 
 		self.human_warm_up_episode = human_warm_up_episode
@@ -100,6 +100,7 @@ class BizHawk(gym.Env):
 			1: "Right",
 			2: "Left",
 			3: "B",
+			4: ""
 			# 3: "Down",
 			# 4: "B"
 		}
@@ -154,11 +155,15 @@ class BizHawk(gym.Env):
 			self._take_action(action)
 			self.last_action = action
 		self.curr_step += 1
+
+		self.update_bounding_box()
 		reward = self._get_reward()
+
 		self.cumulative_reward += reward
 		ob = self._get_state()
 		episode_over = self.curr_step >= self.EPISODE_LENGTH
 		action_code = self.action_dict[action]
+
 		if self.active_debug_text:
 			sys.stdout.write(f"Reward: {reward:4.2f}   Action Taken: {action_code} in step {self.curr_step}           \r")
 			sys.stdout.flush()
@@ -177,6 +182,10 @@ class BizHawk(gym.Env):
 			self.write_graphs()
 		self.cumulative_reward = 0
 		self.max_cumulative_reward = 0
+
+		self.max_bounding_box = [-10] * 256
+		self.min_bounding_box = [10] * 256
+		self.last_bounding_box_size = 0
 		# self.update_target_vector()
 
 		self.proc.stdin.write(b'client.speedmode(400) ')
@@ -184,7 +193,15 @@ class BizHawk(gym.Env):
 		self.proc.stdin.write(b'emu.frameadvance() ')
 		self.proc.stdin.flush()
 		self.last_distance = self.get_distance()
-		return self._get_state()
+		state = self._get_state()
+
+		# Init at basic bounding box
+		self.update_bounding_box()
+		for index, value in enumerate(self.current_vector):
+			self.max_bounding_box[index] = max(self.max_bounding_box[index], value)
+			self.min_bounding_box[index] = min(self.min_bounding_box[index], value)
+
+		return state
 
 	def render(self, mode='human', close=False):
 		return
@@ -328,13 +345,18 @@ class BizHawk(gym.Env):
 
 	def _get_reward(self):
 		def increase_the_bounding_box():
-			delta = self.get_bounding_box_perimeter(self.current_vector) - self.last_bounding_box_size
-			self.last_bounding_box_size = self.get_bounding_box_perimeter(self.current_vector)
+			current_bounding_box_size = self.get_bounding_box_perimeter(self.current_vector)
+			delta = current_bounding_box_size - self.last_bounding_box_size
+			self.last_bounding_box_size = current_bounding_box_size
 			return max(0, delta)
 
 		def increase_the_max_bounding_box():
-			delta = self.get_bounding_box_perimeter(self.max_bounding_box) - self.last_bounding_box_size
-			self.last_bounding_box_size = self.get_bounding_box_perimeter(self.current_vector)
+			last_bounding_box_size = self.get_bounding_box_perimeter(self.max_bounding_box)
+			for index, value in enumerate(self.current_vector):
+				self.max_bounding_box[index] = max(self.max_bounding_box[index], value)
+				self.min_bounding_box[index] = min(self.min_bounding_box[index], value)
+			current_bounding_box_size = self.get_bounding_box_perimeter(self.max_bounding_box)
+			delta = current_bounding_box_size - last_bounding_box_size
 			return max(0, delta)
 
 		def plus_one_for_positivedelta():
@@ -404,11 +426,11 @@ class BizHawk(gym.Env):
 				delta = 0
 			return delta
 
-
 		# The reward is:
-		reward = increase_the_bounding_box()
+		reward = increase_the_max_bounding_box()
 		# BREADCRUMBS_END
 		self.cumulative_reward += reward
+		print(self.cumulative_reward)
 		if self.cumulative_reward > self.max_cumulative_reward:
 			self.max_cumulative_reward = self.cumulative_reward
 		return reward
@@ -449,7 +471,6 @@ class BizHawk(gym.Env):
 	# 		self.memory_vectors.pop()
 	# 		self.memory_vectors.append(self.current_vector)
 
-
 	def update_target_vector(self):
 		def random_screenshot_embedding_vector(MovingTarget=False):
 			if not MovingTarget:
@@ -476,8 +497,7 @@ class BizHawk(gym.Env):
 		random_screenshot_embedding_vector()
 
 	def update_bounding_box(self) -> None:
-		self.min_bounding_box = min(self.current_vector, self.min_bounding_box, key=self.get_bounding_box_perimeter)
-		self.max_bounding_box = max(self.current_vector, self.max_bounding_box, key=self.get_bounding_box_perimeter)
+		self.last_bounding_box_size = self.get_bounding_box_perimeter(self.current_vector)
 		return
 
 	def read_byte_lua(self, num: int):
