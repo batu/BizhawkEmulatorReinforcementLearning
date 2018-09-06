@@ -1,4 +1,4 @@
-import gym_bizhawk
+import bizhawk_env
 import os
 import time
 import json
@@ -17,7 +17,7 @@ from rl.memory import SequentialMemory
 
 REPLAY = False
 run_number = 5
-experiment_name = "V24_IntrinsicExploration"
+experiment_name = "V27_IntrinsicExplorationMaxResetSoftStart"
 
 TB_path = f"Results/TensorBoard/{experiment_name}/"
 
@@ -34,9 +34,9 @@ except:
 models_path = "Results/Models/"
 ENV_NAME = 'BizHawk-v1'
 
-changes = """Switching to intrinsic motivation. Currently what it is trying to is to increase the bounding box. Not the max just the box."""
-reasoning = """ Final attemps to get something for the paper."""
-hypothesis = """It will not work."""
+changes = """ I changed it so that the inital bounding box size is initilized and recorded so the first jump isnt the big jump"""
+reasoning = """ I would have to normalize all by - 50XX and this thrws off a lot of the training."""
+hypothesis = """ """
 
 
 if not REPLAY:
@@ -58,7 +58,7 @@ if not REPLAY:
 # Get the environment and extract the number of actions.
 # env = gym.make(ENV_NAME)
 # BREADCRUMBS_START
-for __ in range(1):
+for __ in range(8):
     for increase_confidence in range(5):
         window_length = 5
         memory_size = 2048
@@ -184,7 +184,7 @@ for __ in range(1):
 
         print("Testing has started!")
         env.start_recording_bizhawk()
-        dqn.test(env, nb_episodes=1, visualize=False)
+        # dqn.test(env, nb_episodes=1, visualize=False)
 
         print("Testing is done!")
         env.shut_down_bizhawk_game()

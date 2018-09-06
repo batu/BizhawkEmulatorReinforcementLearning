@@ -1,0 +1,14 @@
+1,0.0000
+2, inf
+3, inf
+4, inf
+5, inf
+6, inf
+7, inf
+8, inf
+9, inf
+10, inf
+11, inf
+12, inf
+13, inf
+14, inf

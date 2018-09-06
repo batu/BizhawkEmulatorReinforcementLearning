@@ -1,6 +1,8 @@
 from functools import reduce
+import pyautogui
 import numpy as np
 
 a = [1, 2]
 
-print(np.multiply(a, 10))
+while True:
+    print(pyautogui.position())

@@ -1,0 +1,109 @@
+
+network_spec = [
+    # dict(type='embedding', indices=100, size=32),
+    # dict(type'flatten'),
+    dict(type='dense', size=32),
+    dict(type='dense', size=32)
+]
+
+agent = PPOAgent(
+    states=environment.states,
+    actions=environment.actions,
+    network=network_spec,
+    # Agent
+    states_preprocessing=None,
+    actions_exploration=None,
+    reward_preprocessing=None,
+    # MemoryModel
+    update_mode=dict(
+        unit='episodes',
+        # 10 episodes per update
+        batch_size=20,
+        # Every 10 episodes
+        frequency=20
+    ),
+    memory=dict(
+        type='latest',
+        include_next_states=False,
+        capacity=5000
+    ),
+    # DistributionModel
+    distributions=None,
+    entropy_regularization=0.01,
+    # PGModel
+    baseline_mode='states',
+    baseline=dict(
+        type='mlp',
+        sizes=[32, 32]
+    ),
+    baseline_optimizer=dict(
+        type='multi_step',
+        optimizer=dict(
+            type='adam',
+            learning_rate=1e-3
+        ),
+        num_steps=5
+    ),
+    gae_lambda=0.97,
+    # PGLRModel
+    likelihood_ratio_clipping=0.2,
+    # PPOAgent
+    step_optimizer=dict(
+        type='adam',
+        learning_rate=1e-3
+    ),
+    subsampling_fraction=0.2,
+    optimization_steps=25,
+    execution=dict(
+        type='single',
+        session_config=None,
+        distributed_spec=None
+    )
+)
+
+		self.EPISODE_LENGTH = 768
+		self.ACTION_LENGTH = 12
+
+		# This is the action space.
+		self.action_dict = {
+			0: "A",
+			1: "Right",
+			2: "Left",
+			3: "B",
+			4: ""
+			# 3: "Down",
+			# 4: "B"
+		}
+
+		# This is the state
+		return current_vector_with_memory_from_ss_plus_last_action()
+
+		def plusone_increase_minus_half_decrease_or_stationary():
+			distance = self.get_distance()
+			delta = distance - self.last_distance
+
+			reward = -.5
+			# The reward amounts
+			if delta > 0:
+				reward = 1
+			elif delta < 0:
+				reward = -.5
+
+			self.last_distance = distance
+			return reward
+
+		def distance_traveled_between_frames_minus_for_nochange():
+			distance = self.get_distance()
+			delta = distance - self.last_distance
+
+			self.last_distance = distance
+			if delta == 0:
+				delta = -0.1
+			if delta > 30:
+				delta = 0
+			if delta < -1250:
+				delta = 0
+			return delta
+
+		# The reward is:
+		reward = distance_traveled_between_frames_minus_for_nochange()
