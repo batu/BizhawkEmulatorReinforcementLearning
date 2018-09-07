@@ -22,7 +22,6 @@ from tensorforce.execution import Runner
 from tensorforce.contrib.openai_gym import OpenAIGym
 
 from support_utils import save_hyperparameters, send_email, visualize_cumulative_reward, visualize_max_reward
-
 import gym_bizhawk
 
 REPLAY = False
@@ -85,8 +84,8 @@ environment.gym.logging_folder_path = TB_path
 network_spec = [
     # dict(type='embedding', indices=100, size=32),
     # dict(type'flatten'),
-    dict(type='dense', size=14),
-    dict(type='dense', size=14),
+    dict(type='dense', size=32),
+    dict(type='dense', size=16),
     dict(type='dense', size=8)
 ]
 
@@ -124,9 +123,9 @@ agent = PPOAgent(
         type='multi_step',
         optimizer=dict(
             type='adam',
-            learning_rate=1e-4
+            learning_rate=1e-3
         ),
-        num_steps=5
+        num_steps=1
     ),
     gae_lambda=0.97,
     # PGLRModel
@@ -169,11 +168,12 @@ runner = Runner(agent=agent, environment=environment)
 def episode_finished(r):
     print("Finished episode {ep} after {ts} timesteps (reward: {reward})".format(ep=r.episode, ts=r.episode_timestep,
                                                                                  reward=r.episode_rewards[-1]))
+    r.agent.save_model(directory=f"./{run_path}/")
     return True
 
 
 # Start learning
-runner.run(episodes=32, max_episode_timesteps=768, episode_finished=episode_finished)
+runner.run(episodes=64, max_episode_timesteps=768 * 4, episode_finished=episode_finished)
 
 environment.gym.shut_down_bizhawk_game()
 runner.close()

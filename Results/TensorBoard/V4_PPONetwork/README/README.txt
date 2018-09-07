@@ -1,4 +1,4 @@
-Experiment start time: Thu Sep  6 14:59:20 2018
+Experiment start time: Thu Sep  6 20:01:59 2018
 
 Algorithm:
 ppo.
